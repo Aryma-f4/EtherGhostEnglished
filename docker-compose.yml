@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  etherghost:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ETHER_GHOST_SECRET=${ETHER_GHOST_SECRET:-please-change-me}
+      - ETHER_GHOST_AUTH_USERNAME=${ETHER_GHOST_AUTH_USERNAME:-admin}
+      - ETHER_GHOST_AUTH_PASSWORD=${ETHER_GHOST_AUTH_PASSWORD:-}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+    ports:
+      - "8022:8022"
+    restart: unless-stopped
+    volumes:
+      - etherghost_data:/root/.local/share/EtherGhost
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8022/utils/version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  etherghost_data:

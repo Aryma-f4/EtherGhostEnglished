@@ -1,0 +1,303 @@
+<script setup>
+
+import { addPopup, getCurrentApiUrl, getDataOrPopupError, parseDataOrPopupError, postDataOrPopupError } from "@/assets/utils";
+import { reactive, ref, watch } from "vue";
+import iconCross from "@/components/icons/iconCross.vue";
+import { store } from "@/assets/store";
+import axios from "axios";
+
+const props = defineProps({
+  session: String,
+})
+
+if (props.session) {
+  store.session = props.session
+}
+
+
+const sessions = ref([])
+const supportedSendMethods = reactive({})
+
+const readableProxyType = {
+  vessel_forward_tcp: "Forward TCP Proxy (Vessel memory webshell)",
+  psudo_forward_proxy: "Pseudo forward proxy (HTTP only)",
+}
+
+// `openedProxies` is a list of objects like:
+// {
+//     "type": "psudo_forward_proxy",
+//     "session_id": session_id,
+//     "session_name": get_session_name(session_id),
+//     "listen_host": listen_host,
+//     "listen_port": listen_port,
+//     "host": host,
+//     "port": port,
+//     "send_method": send_method,
+// }
+
+const openedProxies = ref([])
+
+// TODO: support not just remote IP but remote address
+
+const addProxyInput = reactive({
+  type: "",
+  session_id: "",
+  listen_host: "",
+  listen_port: "",
+  host: "",
+  port: "",
+  send_method: "",
+})
+
+// null: no input, false: input invalid, true: input valid
+const addProxyInputValid = reactive({
+  session_id: null,
+  listen_host: null,
+  listen_port: null,
+  host: null,
+  port: null,
+  send_method: null,
+})
+
+
+async function createProxy() {
+  const invalidInputs = Object.entries(addProxyInputValid).filter(pair => (!pair[1]) && pair[0] != "send_method").map(pair => pair[0])
+  if (invalidInputs.length != 0) {
+    addPopup("red", "Please fill all fields", `${invalidInputs[0]} field is invalid`)
+    return;
+  } else if (addProxyInput.type == "") {
+    addPopup("red", "Please select proxy type", "Proxy type is not set")
+  } else if (addProxyInput.type == "psudo_forward_proxy" || addProxyInput.type == "vessel_forward_tcp") {
+    const data = {
+      "type": addProxyInput.type,
+      "session_id": addProxyInput.session_id,
+      "listen_host": addProxyInput.listen_host,
+      "listen_port": parseInt(addProxyInput.listen_port),
+      "host": addProxyInput.host,
+      "port": parseInt(addProxyInput.port),
+      "send_method": addProxyInput.send_method ? addProxyInput.send_method : null,
+    }
+    await postDataOrPopupError("/forward_proxy/create_psudo_proxy", data)
+    addPopup("green", "Proxy added successfully", `Proxy to ${addProxyInput.host}:${addProxyInput.port} added`)
+    Object.keys(addProxyInput).forEach(key => {
+      addProxyInput[key] = ""
+    });
+    setTimeout(() => {
+      addPopup("yellow", "This feature is still unstable", `Proxy is experimental and only supports HTTP!`)
+    }, 500)
+  } else {
+    addPopup("red", "Unsupported proxy type", `Currently unsupported proxy type ${JSON.stringify(addProxyInput.type)}`)
+  }
+  openedProxies.value = await getDataOrPopupError("/forward_proxy/list")
+
+}
+async function closeProxy(listen_port) {
+  const response = await axios.delete(`${getCurrentApiUrl()}/forward_proxy/${listen_port}/`)
+  try {
+    const result = parseDataOrPopupError(response)
+    if (!result) {
+      addPopup("yellow", "Close failed", "Proxy cannot be closed")
+    }
+  } finally {
+    openedProxies.value = await getDataOrPopupError("/forward_proxy/list")
+  }
+}
+
+watch(addProxyInput, (newValue, oldValue) => {
+  addProxyInputValid.session_id = newValue.session_id == "" ? null : true
+  addProxyInputValid.listen_host = newValue.listen_host == "" ? null : /^\d+\.\d+\.\d+\.\d+$/.test(newValue.listen_host)
+  addProxyInputValid.listen_port = newValue.listen_port == "" ? null : /^\d{1,5}$/.test(newValue.listen_port)
+  addProxyInputValid.host = newValue.host == "" ? null : /^\d+\.\d+\.\d+\.\d+$/.test(newValue.host)
+  addProxyInputValid.port = newValue.port == "" ? null : /^\d{1,5}$/.test(newValue.port)
+  if (newValue.send_method == "") {
+    addProxyInputValid.send_method = null
+  } else if (!supportedSendMethods[newValue.session_id]) {
+    addProxyInputValid.send_method = false
+  } else {
+    addProxyInputValid.send_method = supportedSendMethods[newValue.session_id].includes(addProxyInput.send_method)
+  }
+})
+
+watch(() => addProxyInput.session_id, async (newValue, oldValue) => {
+  if (newValue == "") {
+    return
+  }
+  if (!supportedSendMethods[newValue]) {
+    supportedSendMethods[newValue] = await getDataOrPopupError(`/session/${newValue}/supported_send_tcp_methods`)
+  }
+})
+
+setTimeout(async () => {
+  const newSessions = await getDataOrPopupError("/session")
+  sessions.value = newSessions.map(session => ({
+    name: session.name,
+    readable_type: session.readable_type,
+    id: session.id,
+  }))
+}, 0)
+
+setTimeout(async () => {
+  openedProxies.value = await getDataOrPopupError("/forward_proxy/list")
+}, 0)
+
+setTimeout(() => {
+  if (store.session) {
+    addProxyInput.session_id = store.session
+  }
+}, 0)
+
+</script>
+
+<template>
+  <div class="add-proxy shadow-box">
+    <form action="" class="add-proxy-form" @submit.prevent="createProxy">
+      <select name="proxy_type" id="" v-model="addProxyInput.type">
+        <option value="">Select proxy type</option>
+        <option v-for="proxyType in Object.keys(readableProxyType)" :value="proxyType">{{
+          readableProxyType[proxyType] }}</option>
+        <!-- <option value="backward">反向代理</option> -->
+      </select>
+      <select name="session" id="" v-model="addProxyInput.session_id">
+        <option :value="''">Select a session
+        </option>
+        <option v-for="session in sessions" :value="session.id">{{ session.readable_type }} - {{ session.name }}
+        </option>
+      </select>
+      <input type="text" name="listen_host" id="" placeholder="Local listen IP" v-model="addProxyInput.listen_host"
+        :data-valid="addProxyInputValid.listen_host">
+      <input type="text" name="listen_port" id="" placeholder="Local listen port" v-model="addProxyInput.listen_port"
+        :data-valid="addProxyInputValid.listen_port">
+      <input type="text" name="host" id="" placeholder="Remote IP" v-model="addProxyInput.host"
+        :data-valid="addProxyInputValid.host">
+      <input type="text" name="port" id="" placeholder="Remote port" v-model="addProxyInput.port"
+        :data-valid="addProxyInputValid.port">
+      <select v-if="supportedSendMethods.length != 0 && addProxyInput.session_id != '' && addProxyInput.type=='psudo_forward_proxy'" name="send_method" id=""
+        v-model="addProxyInput.send_method">
+        <option :value="''">Auto select sending method
+        </option>
+        <option v-for="method in supportedSendMethods[addProxyInput.session_id]" :value="method">{{ method }}
+        </option>
+      </select>
+      <input type="button" value="Add proxy" @click="createProxy">
+    </form>
+  </div>
+  <table class="opened-proxies shadow-box">
+    <tr class="opened-proxies-row">
+      <th class="open-proxies-head">Session</th>
+      <th class="open-proxies-head">Proxy Type</th>
+      <th class="open-proxies-head">Listen IP</th>
+      <th class="open-proxies-head">Listen Port</th>
+      <th class="open-proxies-head">Remote IP</th>
+      <th class="open-proxies-head">Remote Port</th>
+      <th class="open-proxies-head">Send Method</th>
+      <th class="open-proxies-head">Actions</th>
+    </tr>
+    <tr class="opened-proxies-row" v-for="proxy in openedProxies">
+      <td class="open-proxies-data">{{ proxy.session_name }}</td>
+      <td class="open-proxies-data">{{ readableProxyType[proxy.type] }}</td>
+      <td class="open-proxies-data">{{ proxy.listen_host }}</td>
+      <td class="open-proxies-data">{{ proxy.listen_port }}</td>
+      <td class="open-proxies-data">{{ proxy.host }}</td>
+      <td class="open-proxies-data">{{ proxy.port }}</td>
+      <td class="open-proxies-data">{{ proxy.send_method }}</td>
+      <td class="open-proxies-data">
+        <div class="close-proxy-button" @click="closeProxy(proxy.listen_port)">
+          <iconCross></iconCross>
+        </div>
+      </td>
+    </tr>
+  </table>
+</template>
+
+<style scoped>
+.add-proxy {
+  background-color: var(--background-color-2);
+  border-radius: 20px;
+  width: 100%;
+  height: 100px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.add-proxy-form {
+  width: 80%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.add-proxy input,
+.add-proxy select {
+  height: 50px;
+  min-width: 100px;
+  border-radius: 20px;
+  border: none;
+  outline: 2px solid #ffffff00;
+  background-color: var(--background-color-1);
+  color: var(--font-color-primary);
+  font-size: 18px;
+  padding-left: 10px;
+  padding-right: 10px;
+  transition: outline-color 0.3s ease;
+}
+
+.add-proxy input:focus,
+.add-proxy select:focus {
+  outline: 2px solid var(--font-color-secondary);
+}
+
+.add-proxy input:not(:focus)[data-valid="false"] {
+  outline: 2px solid var(--red);
+}
+
+.add-proxy input:not(:focus)[data-valid="true"] {
+  outline: 2px solid var(--green);
+}
+
+.add-proxy input[type="text"] {
+  max-width: 150px;
+}
+
+.opened-proxies {
+  margin-top: 20px;
+  background-color: var(--background-color-2);
+  width: 100%;
+  height: max-content;
+  color: var(--font-color-primary);
+  font-size: 20px;
+  border-radius: 20px;
+  padding-left: 20px;
+}
+
+.opened-proxies-row {
+  height: 60px;
+}
+
+.open-proxies-head,
+.open-proxies-data {
+  padding-left: 10px;
+  text-align: left;
+}
+
+.close-proxy-button {
+  stroke: var(--font-color-black);
+  width: 30px;
+  height: 30px;
+  background-color: var(--red);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-proxy-button svg {
+  width: 25px;
+  height: 25px;
+}
+</style>

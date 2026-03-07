@@ -1,0 +1,49 @@
+@import './base.css';
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+
+.button {
+  height: 40px;
+  border: none;
+  outline: none;
+  border-radius: 20px;
+  margin-right: 10px;
+  font-size: 1rem;
+  align-items: center;
+  background-color: var(--background-color-3);
+  color: var(--font-color-primary);
+  min-width: 100px;
+  padding-left: 10px;
+  padding-right: 10px;
+  transition: all 0.3s ease;
+}
+
+.button:hover {
+  background-color: #ffffff15;
+}
+
+.scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  transition: all 1s ease;
+  background-color: var(--font-color-secondary);
+}
+
+.shadow-box {
+  box-shadow: 0 0 10px rgba(15, 15, 15, 0.5);
+}
+
+body[data-theme="glass"] .shadow-box {
+  backdrop-filter: blur(20px);
+}

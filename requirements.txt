@@ -1,0 +1,14 @@
+pydantic
+fastapi
+requests
+pycryptodome
+sqlalchemy
+uvicorn
+sqlalchemy-utils
+httpx
+socksio
+chardet
+python-multipart
+packaging
+argon2-cffi
+python-dotenv

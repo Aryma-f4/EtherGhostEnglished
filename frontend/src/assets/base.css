@@ -1,0 +1,99 @@
+@font-face {
+    font-family: "MapleMono";
+    src: url("./MapleMono-NF-Regular.ttf");
+}
+
+@font-face {
+    font-family: "MapleMono SemiBold";
+    src: url("./MapleMono-NF-SemiBold.ttf");
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "MapleMono", "Microsoft Yahei", "San Francisco", "Helvetica", 'Courier New', Courier, monospace;
+}
+
+:root {
+    --red: #ffae9b;
+    --yellow: #efd057;
+    --green: #9fe88d;
+    --blue: #28ebff;
+    --white: #b1cbd5;
+    --border-color-grey: #38404c;
+
+    --color-java: #b07219;
+    --color-javascript: #f7e018;
+    --color-php: #8993be;
+    --color-python: #3572A5;
+    --color-shell: #89e051;
+
+}
+
+[data-theme="white"],
+[data-theme="red"],
+[data-theme="yellow"],
+[data-theme="green"],
+[data-theme="blue"] {
+    --background-color-1: #2a303c;
+    --background-color-2: #262b35;
+    --background-color-3: #20252e;
+    --background-color-4: #1c212b;
+    --background-color-hover: #38404c;
+    --font-color-black: #091307;
+    --font-color-primary: #b1cbd5;
+    --font-color-secondary: #64748b;
+}
+
+[data-theme="white"] {
+    --primary-color: var(--white);
+}
+
+[data-theme="red"] {
+    --primary-color: var(--red);
+}
+
+[data-theme="yellow"] {
+    --primary-color: var(--yellow);
+}
+
+[data-theme="green"] {
+    --primary-color: var(--green);
+}
+
+[data-theme="blue"] {
+    --primary-color: var(--blue);
+}
+
+[data-theme="glass"] {
+    --primary-color: #ebeaea30;
+    --background-color-1: #ebeaea30;
+    --background-color-2: #f0f0f070;
+    --background-color-3: #ffffffa0;
+    --background-color-4: #ffffffff;
+    --background-color-hover: #ffffff80;
+    --font-color-primary: #1d1d1d;
+    --font-color-secondary: #575757;
+    --font-color-black: #091307;
+}
+
+body,
+html {
+    margin: 0;
+}
+
+body[data-theme="glass"] {
+    /* background-color: var(--background-color-1); */
+    background-image: url("/utils/background_image");
+    background-size: cover;
+    background-attachment: fixed;
+    background-color: transparent;
+}
+
+body[data-theme="white"],
+body[data-theme="red"],
+body[data-theme="yellow"],
+body[data-theme="green"],
+body[data-theme="blue"] {
+    background-image: none;
+    background-color: var(--background-color-1);
+}
