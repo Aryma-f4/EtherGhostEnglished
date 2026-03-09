@@ -24,6 +24,9 @@ import ReverseShellMain from "./components/pages/ReverseShellMain.vue";
 import ConnectorMain from "./components/pages/ConnectorMain.vue";
 import ConnectorEditorMain from "./components/pages/ConnectorEditorMain.vue";
 import LoginMain from "./components/pages/LoginMain.vue";
+import DBMSMain from "./components/pages/DBMSMain.vue";
+import DBMSList from "./components/pages/DBMSList.vue";
+import DBMSDetail from "./components/pages/DBMSDetail.vue";
 
 const routes = [
   { path: "/login", component: LoginMain, props: true },
@@ -84,6 +87,8 @@ const routes = [
   { path: "/reverse-shell/:session", component: ReverseShellMain, props: true },
   { path: "/proxies", component: Proxies, props: true },
   { path: "/proxies/:session", component: Proxies, props: true },
+  { path: "/dbms/", component: DBMSList, props: true },
+  { path: "/dbms/:id", component: DBMSDetail, props: true },
 ];
 
 const router = createRouter({

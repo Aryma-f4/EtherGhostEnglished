@@ -15,17 +15,17 @@ from ..session_connector import (
 @register_connector
 class ReverseShellConnector(SessionConnector):
     connector_name = f"{__name__.replace('.', '_')}_ReverseShellConnector"
-    connector_name_readable = f"Linux TCP反弹Shell"
+    connector_name_readable = "Linux TCP Reverse Shell"
     session_class = ReverseShellSession
     options: list[OptionGroup] = [
         {
-            "name": "监听配置",
+            "name": "Listen Settings",
             "options": [
                 Option(
                     id="port",
-                    name="监听端口",
+                    name="Listen Port",
                     type="text",
-                    placeholder="反弹shell的监听端口",
+                    placeholder="Listening port for reverse shell",
                     default_value="3001",
                     alternatives=None,
                 ),
@@ -70,7 +70,7 @@ class ReverseShellConnector(SessionConnector):
             self.connections[str(client_id)] = (reader, writer)
             new_session_info = SessionInfo(
                 session_type=self.get_session_type(),
-                name=f"反弹Shell #{self.session_count}",
+                name=f"Reverse Shell #{self.session_count}",
                 connection={"connection_id": str(client_id)},
                 session_id=client_id,
                 note=f"Reverse shell {client_id}",

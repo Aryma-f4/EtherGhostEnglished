@@ -2,6 +2,7 @@
 import { computed, ref, shallowRef, watch } from "vue"
 import IconHome from "@/components/icons/iconHome.vue"
 import IconTerminal from "@/components/icons/iconTerminal.vue"
+import IconDatabase from "@/components/icons/iconDatabase.vue"
 import IconFileBrowser from "@/components/icons/iconFileBrowser.vue"
 import IconInfo from "@/components/icons/iconInfo.vue"
 import IconProxy from "@/components/icons/iconProxy.vue"
@@ -36,6 +37,12 @@ const iconSpecs = [
     component: IconTerminal,
     uri: "/terminal/SESSION",
     tooltip: "Terminal"
+  },
+  {
+    type: "dbms",
+    component: IconDatabase,
+    uri: "/dbms/",
+    tooltip: "DBMS"
   },
   {
     type: "file-browser",
@@ -201,6 +208,13 @@ const clickMenuOthers = ClickMenuManager(
       icon: IconWarning,
       color: "white",
       link: ""
+    },
+    {
+      name: "dbms",
+      text: "DBMS",
+      icon: IconWarning,
+      color: "white",
+      link: "/dbms/"
     },
   ],
   (item) => {

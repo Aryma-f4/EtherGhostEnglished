@@ -12,3 +12,7 @@ python-multipart
 packaging
 argon2-cffi
 python-dotenv
+pymysql
+psycopg[binary]
+oracledb
+pyodbc

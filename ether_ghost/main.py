@@ -57,6 +57,7 @@ from .api.sessiontype import router as sessiontype_router
 from .api.settings import router as settings_router
 from .api.utils import router as utils_router
 from .api.auth import router as auth_router
+from .api.dbms import router as dbms_router
 
 
 from .utils import const
@@ -121,6 +122,7 @@ app.include_router(session_router)
 app.include_router(sessiontype_router)
 app.include_router(settings_router)
 app.include_router(utils_router)
+app.include_router(dbms_router)
 
 
 app.add_middleware(

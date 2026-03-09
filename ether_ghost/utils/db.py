@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from uuid import uuid4, UUID
 import sqlalchemy as sa
 from sqlalchemy_utils import UUIDType  # type: ignore
-from ..session_types import SessionInfo, SessionConnectorInfo
+from ..session_types import SessionInfo, SessionConnectorInfo, DBMSInfo
 
 from .const import SETTINGS_VERSION, STORE_URL
 
@@ -49,6 +49,18 @@ class SettingsModel(Base):  # type: ignore
     version = sa.Column(sa.String)
     settings = sa.Column(sa.JSON)
 
+class DBMSInfoModel(Base):  # type: ignore
+    __tablename__ = "dbms_info"
+    record_id = sa.Column(sa.Integer, primary_key=True)
+    dbms_id = sa.Column(UUIDType(binary=False), default=uuid4)  # type: ignore
+    name = sa.Column(sa.String)
+    db_type = sa.Column(sa.String)
+    host = sa.Column(sa.String)
+    port = sa.Column(sa.Integer)
+    username = sa.Column(sa.String)
+    password_enc = sa.Column(sa.String)
+    database = sa.Column(sa.String)
+    options = sa.Column(sa.JSON)
 
 @dataclass
 class SessionInfoModelTypeHint:
@@ -76,6 +88,19 @@ class SessionConnectorModelTypeHint:
     note: str
     connection: t.Dict[t.Any, t.Any]
     autostart: bool
+
+@dataclass
+class DBMSInfoModelTypeHint:
+    record_id: int
+    dbms_id: UUID
+    name: str
+    db_type: str
+    host: str
+    port: int
+    username: str
+    password_enc: str
+    database: str
+    options: t.Dict[str, t.Any]
 
 
 Base.metadata.create_all(engine)
@@ -122,6 +147,40 @@ def connector_to_model(connector: dict) -> SessionConnectorModel:
     """将dict转换成SessionConnectorModel(SQLAlchemy的对象)"""
     return SessionConnectorModel(**connector)
 
+def _derive_key_from_secret() -> bytes:
+    import hashlib, os
+    secret = os.environ.get("ETHER_GHOST_SECRET", "change-this-secret")
+    return hashlib.sha256(secret.encode()).digest()
+
+def _enc_password(plain: str) -> str:
+    from ..utils.cipher import encrypt_aes256_cbc
+    key = _derive_key_from_secret()
+    import base64
+    return base64.b64encode(encrypt_aes256_cbc(key, plain.encode())).decode()
+
+def _dec_password(enc: str) -> str:
+    from ..utils.cipher import decrypt_aes256_cbc
+    key = _derive_key_from_secret()
+    import base64
+    return decrypt_aes256_cbc(key, base64.b64decode(enc.encode())).decode()
+
+def dbms_model_to_info(model: DBMSInfoModelTypeHint) -> DBMSInfo:
+    return DBMSInfo(
+        dbms_id=model.dbms_id,
+        name=model.name,
+        db_type=model.db_type,
+        host=model.host,
+        port=model.port,
+        username=model.username,
+        password=_dec_password(model.password_enc) if model.password_enc else "",
+        database=model.database,
+        options=model.options or {},
+    )
+
+def dbms_info_to_model(info: DBMSInfo) -> DBMSInfoModel:
+    data = info.model_dump()
+    data["password_enc"] = _enc_password(data.pop("password", ""))
+    return DBMSInfoModel(**data)
 
 # 操作数据库
 
@@ -308,3 +367,48 @@ def ensure_settings():
     default_settings = {"theme": "green", "proxy": ""}
     if not get_settings():
         set_settings(default_settings)
+
+# -------- DBMS management --------
+def list_dbms() -> t.List[DBMSInfo]:
+    models = orm_session.query(DBMSInfoModel).all()
+    return [dbms_model_to_info(model) for model in models]
+
+def add_or_update_dbms(info: DBMSInfo) -> DBMSInfo:
+    dbms_id = info.dbms_id
+    if isinstance(dbms_id, str):
+        dbms_id = UUID(dbms_id)
+    model = (
+        orm_session.query(DBMSInfoModel)
+        .filter(DBMSInfoModel.dbms_id == dbms_id)
+        .first()
+    )
+    if model is None:
+        orm_session.add(dbms_info_to_model(info))
+    else:
+        data = info.model_dump()
+        for key, value in data.items():
+            if key == "password":
+                setattr(model, "password_enc", _enc_password(value))
+            elif hasattr(model, key):
+                setattr(model, key, value)
+    orm_session.commit()
+    model = (
+        orm_session.query(DBMSInfoModel)
+        .filter(DBMSInfoModel.dbms_id == info.dbms_id)
+        .first()
+    )
+    return dbms_model_to_info(model)  # type: ignore
+
+def delete_dbms(dbms_id: t.Union[str, UUID]) -> bool:
+    if isinstance(dbms_id, str):
+        dbms_id = UUID(dbms_id)
+    model = (
+        orm_session.query(DBMSInfoModel)
+        .filter(DBMSInfoModel.dbms_id == dbms_id)
+        .first()
+    )
+    if model is None:
+        return False
+    orm_session.delete(model)
+    orm_session.commit()
+    return True

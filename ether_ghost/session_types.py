@@ -29,3 +29,19 @@ class SessionConnectorInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DBMSInfo(BaseModel):
+    """DBMS configuration entry"""
+
+    dbms_id: UUID = Field(default_factory=uuid4)
+    name: str
+    db_type: str  # mysql, postgresql, oracle, sqlserver, sqlite
+    host: str = ""
+    port: int = 0
+    username: str = ""
+    password: str = ""
+    database: str = ""
+    options: t.Dict[str, t.Any] = Field(default_factory=dict)
+
+    class Config:
+        from_attributes = True
