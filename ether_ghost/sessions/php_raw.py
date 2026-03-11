@@ -23,7 +23,7 @@ logger = logging.getLogger("core.sessions.php_raw")
 
 
 def base64_encode(s):
-    """将给定的字符串或字节序列编码成base64"""
+    """Encode a string or bytes into base64"""
     if isinstance(s, str):
         s = s.encode("utf-8")
     return base64.b64encode(s).decode()

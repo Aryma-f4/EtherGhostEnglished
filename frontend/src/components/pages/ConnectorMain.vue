@@ -14,8 +14,8 @@ const connectors = ref([
     // {
     //     "connector_type": "",
     //     "connector_id": "",
-    //     "name": "反弹Shell",
-    //     "note": "《原神》是由米哈游自主研发的一款全新开放世界冒险游戏。",
+    //     "name": "Reverse Shell",
+    //     "note": "Sample connector note",
     //     "connection": {},
     //     "autostart": false,
     // },

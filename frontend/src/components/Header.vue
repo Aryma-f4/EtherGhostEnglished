@@ -109,17 +109,17 @@ watch(() => store.session, (newSession, _) => {
 const iconsCount = computed(() => icons.value.length)
 
 // click menus
-// 这里一共有三个click menu
-// clickMenuRightClick: 右键普通按钮时出现的click menu
-// clickMenuOthers: 点击Others按钮时出现的click menu
-// clickMenuOthersRightClick: 右键点击clickMenuOthers的项目时产生的click menu(二级菜单)
+// There are three click menus
+// clickMenuRightClick: right-click menu for regular buttons
+// clickMenuOthers: menu shown when clicking the Others button
+// clickMenuOthersRightClick: right-click menu for items inside clickMenuOthers (secondary menu)
 
-// 左键点击clickMenuOthers时会直接执行对应的动作并关闭click menu
-// 右键点击clickMenuOthers时会打开clickMenuOthersRightClick
-// 然后在clickMenuOthersRightClick关闭时一并关闭clickMenuOthers
+// Left click on clickMenuOthers runs the action and closes the menu
+// Right click on clickMenuOthers opens clickMenuOthersRightClick
+// When clickMenuOthersRightClick closes, clickMenuOthers closes too
 
-// 其中rightClickedOtherEntry作为判断何时关闭clickMenuOthersRightClick的标志
-// 需要在clickMenuOthersRightClick关闭时一并清零
+// rightClickedOtherEntry is used to decide when to close clickMenuOthersRightClick
+// It must be cleared when clickMenuOthersRightClick closes
 
 let rightClickedIcon = undefined
 

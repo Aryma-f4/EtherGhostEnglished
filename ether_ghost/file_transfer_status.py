@@ -1,7 +1,7 @@
 """
-文件传输状态管理模块
+File transfer status management module
 
-负责跟踪和管理文件上传下载的进度状态，提供状态记录和查询功能。
+Tracks file upload/download progress and provides status records and queries.
 """
 
 from contextlib import contextmanager

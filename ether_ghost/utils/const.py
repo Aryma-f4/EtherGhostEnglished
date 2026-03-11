@@ -5,8 +5,8 @@ from pathlib import Path
 SETTINGS_VERSION = "0.0.1"
 DB_FILENAME = "store.db"
 
-# 当前操作系统的数据保存位置
-# TODO: 允许用户自定义
+# Data storage location for the current OS
+# TODO: allow user-defined path
 if os.name == "posix":
     DATA_FOLDER = Path("~/.local/share/EtherGhost").expanduser()
 elif os.name == "nt":

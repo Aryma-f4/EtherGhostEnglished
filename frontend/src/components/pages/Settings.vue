@@ -22,7 +22,7 @@ const userInterfaceOptionGroup = {
   options: [
     // {
     //   id: "name",
-    //   name: "名称",
+    //   name: "Name",
     //   type: "text",
     //   placeholder: "xxx",
     //   default_value: undefined

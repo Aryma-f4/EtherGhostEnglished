@@ -28,16 +28,16 @@ location_readable = {"US": "🇺🇸"}
 
 
 def session_info_to_session(session_info: SessionInfo) -> core.SessionInterface:
-    """将session info转成session对象
+    """Convert session info to a session object
 
     Args:
         session_info (SessionInfo): session info
 
     Returns:
-        session.Session: session对象
+        session.Session: session object
     """
     if session_info.session_type not in session_type_info:
-        raise core.UserError(f"Session类型{session_info.session_type}不存在")
+        raise core.UserError(f"Session type {session_info.session_type} does not exist")
     constructor = session_type_info[session_info.session_type]["constructor"]
     return constructor(session_info.connection)
 
@@ -45,13 +45,13 @@ def session_info_to_session(session_info: SessionInfo) -> core.SessionInterface:
 def get_session_info_by_id(
     session_id: t.Union[str, UUID],
 ) -> t.Union[None, SessionInfo]:
-    """根据id返回session info
+    """Get session info by id
 
     Args:
         session_id (t.Union[str, UUID]): session id
 
     Returns:
-        t.Union[None, SessionInfo]: session info，找不到时返回None
+        t.Union[None, SessionInfo]: session info, returns None if not found
     """
     if isinstance(session_id, str):
         session_id = UUID(session_id)
@@ -62,13 +62,13 @@ def get_session_info_by_id(
 
 
 def get_session_by_id(session_id: t.Union[str, UUID]) -> core.SessionInterface:
-    """根据id返回session对象，优先返回缓存的对象
+    """Get session by id, prefer cached session
 
     Args:
         session_id (t.Union[str, UUID]): session id
 
     Returns:
-        t.Union[None, session.Session]: session对象，找不到时返回None
+        t.Union[None, session.Session]: session object, returns None if not found
     """
     if isinstance(session_id, str):
         session_id = UUID(session_id)
@@ -97,7 +97,7 @@ def clear_session_cache():
 
 
 def session_to_readable(sess: SessionInfo) -> t.Dict[str, t.Any]:
-    """将SessionInfo对象转换为可读的字典"""
+    """Convert SessionInfo object to a readable dict"""
     return {
         "type": sess.session_type,
         "readable_type": session_type_info[sess.session_type]["readable_name"],
@@ -109,18 +109,18 @@ def session_to_readable(sess: SessionInfo) -> t.Dict[str, t.Any]:
 
 
 def list_sessions_db_readable() -> t.List[t.Dict[str, t.Any]]:
-    """列出所有的session info（可读格式）"""
+    """List all session info (readable format)"""
     return [session_to_readable(sess) for sess in db.list_sessions()]
 
 
 def add_session_info(info: SessionInfo):
-    """将session info添加到数据库"""
+    """Add session info to the database"""
     db.add_session_info(info)
 
 
 async def delete_session_info_by_id(session_id: UUID):
-    """根据session id删除某个session
-    如果是Connector的session则通知connector关闭，否则从数据库中删除"""
+    """Delete a session by session id
+    If it is a connector session, notify the connector to close it, otherwise delete from DB"""
     if connector := session_connector.get_connector_of_session(session_id):
         session_info = get_session_info_by_id(session_id)
         assert (

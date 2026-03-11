@@ -1,10 +1,10 @@
 """
-Session连接器管理模块
+Session connector management module
 
-负责：
-- 定义SessionConnector协议接口
-- 管理连接器的注册和启动
-- 处理session连接和生命周期
+Responsibilities:
+- Define SessionConnector protocol interface
+- Manage connector registration and startup
+- Handle session connections and lifecycle
 """
 
 from typing import ClassVar, Protocol
@@ -54,25 +54,25 @@ def delete_session(client_id: uuid.UUID):
 
 
 class SessionConnector(Protocol):
-    connector_name: ClassVar[str]  # 内部使用的Connector Name, 全局唯一
-    connector_name_readable: ClassVar[str]  # 展示给用户的Connector Name
+    connector_name: ClassVar[str]  # Internal connector name, globally unique
+    connector_name_readable: ClassVar[str]  # Display name for users
     session_class: ClassVar[type[SessionInterface]]
     options: ClassVar[list[OptionGroup]]
 
     def __init__(self, connector_id: uuid.UUID, config: dict):
-        """提供connector实例对应的connector_id和对应的config"""
+        """Provide connector_id and config for the connector instance"""
         raise NotImplementedError()
 
     async def run(self):
         raise NotImplementedError()
 
     def get_session_type(self) -> str:
-        """返回正在运行的connector对应的session_type
-        connector生成的session_info都由此session_type标记"""
+        """Return session_type for the running connector
+        Session info created by the connector uses this session_type"""
         raise NotImplementedError()
 
-    # 构造session对象与关闭session时传入的是session连接方式相关的config字典
-    # 因为构造session对象应该与session的名字和备注等信息无关
+    # build_session and close_session receive connection config dicts
+    # because session objects should not depend on name/note metadata
 
     def build_session(self, config: dict) -> SessionInterface:
         raise NotImplementedError()
@@ -93,11 +93,11 @@ def register_connector(clazz: type[SessionConnector]):
 
 async def start_connector(connector_id: uuid.UUID):
     if connector_id in started_connectors:
-        raise exceptions.UserError(f"Connector {connector_id} 已经启动")
+        raise exceptions.UserError(f"Connector {connector_id} already started")
 
     connector_info = db.get_session_connector_by_connector_id(connector_id)
     if connector_info is None:
-        raise RuntimeError(f"找不到connector {connector_id}")
+        raise RuntimeError(f"Connector {connector_id} not found")
 
     clazz = session_connectors[connector_info.connector_type]
     logger.debug(f"Connector info: {connector_info.connection=}")
@@ -116,12 +116,12 @@ async def start_connector(connector_id: uuid.UUID):
 
 async def stop_connector(connector_id: uuid.UUID):
     if connector_id not in started_connectors:
-        raise exceptions.UserError(f"Connector {connector_id} 未启动")
+        raise exceptions.UserError(f"Connector {connector_id} not started")
 
     connector_info = db.get_session_connector_by_connector_id(connector_id)
     if connector_info is None:
         raise exceptions.ServerError(
-            f"在数据库中找不到正在运行的connector {connector_id}"
+            f"Cannot find running connector {connector_id} in database"
         )
     connector, task = started_connectors.pop(connector_id)
 
@@ -145,7 +145,7 @@ async def autostart_connectors():
     )
     exceptions = [task for task in tasks if isinstance(task, Exception)]
     if exceptions:
-        raise ExceptionGroup("自动启动Connector失败", exceptions)
+        raise ExceptionGroup("Failed to autostart connectors", exceptions)
     return tasks
 
 

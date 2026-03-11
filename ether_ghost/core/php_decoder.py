@@ -10,7 +10,7 @@ from ..utils import const
 
 class Decoder(t.TypedDict):
     type: t.Literal["builtin", "antsword", "custom"]
-    phpcode: str  # 在加载失败时为空字符串
+    phpcode: str  # empty string when load fails
     decode_response: t.Callable[[str], str]
 
 

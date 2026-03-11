@@ -92,7 +92,7 @@ def reverse_shell_payload(host: str, port: int):
 
 
 def shell_command(args: t.List[str]):
-    """转译命令或命令参数"""
+    """Quote a command or its arguments"""
     return " ".join(shlex.quote(arg) for arg in args)
 
 
@@ -254,7 +254,7 @@ class LinuxCmdOneLiner:
         return (await self.submit("pwd")).strip()
 
     async def _list_dir(self, dir_path: str) -> t.Union[t.List[DirectoryEntry], None]:
-        # 不仅列出文件夹，在给定的是文件时给出文件的详细信息
+        # list directory; if a file is given, return its file details
 
         # yes, we are parsing output of `ls`, although we shoudn't
         command_output = await self.submit(
@@ -274,7 +274,7 @@ class LinuxCmdOneLiner:
             try:
                 filesize = int(filesize)
             except Exception as exc:
-                raise exceptions.FileError("无法解析文件大小") from exc
+                raise exceptions.FileError("Cannot parse file size") from exc
 
             filetype = perm[0]
             perm = parse_file_permission(perm[1:10])
@@ -305,12 +305,12 @@ class LinuxCmdOneLiner:
             shell_command(["mkdir", dir_path]) + " && echo finished"
         )
         if result.strip() != "finished":
-            raise exceptions.FileError("创建文件夹失败")
+            raise exceptions.FileError("Failed to create directory")
 
     async def get_file_contents(self, filepath: str, max_size: int = 1024 * 200):
         ls_result = await self.list_dir(filepath)
         if not ls_result or ls_result[0].filesize > max_size:
-            raise exceptions.FileError(f"文件大小太大(>{max_size}B)，建议下载编辑")
+            raise exceptions.FileError(f"File too large (>{max_size}B); download to edit")
         content_b64 = await self.submit(["base64", "-w", "0", filepath])
         return base64.b64decode(content_b64)
 
@@ -332,13 +332,13 @@ class LinuxCmdOneLiner:
         cmd = shell_command(["mv", filepath, new_filepath]) + " && echo finished"
         result = await self.submit(cmd)
         if result.strip() != "finished":
-            raise exceptions.FileError("移动失败")
+            raise exceptions.FileError("Move failed")
 
     async def copy_file(self, filepath: str, new_filepath: str):
         cmd = shell_command(["cp", filepath, new_filepath]) + " && echo finished"
         result = await self.submit(cmd)
         if result.strip() != "finished":
-            raise exceptions.FileError("移动失败")
+            raise exceptions.FileError("Move failed")
 
     async def upload_file(
         self, filepath: str, content: bytes, callback: t.Union[t.Callable, None] = None
@@ -347,7 +347,7 @@ class LinuxCmdOneLiner:
             shell_command(["touch", filepath]) + " && echo finished"
         )
         if result_touch.strip() != "finished":
-            raise exceptions.FileError("文件上传失败：无法新建文件")
+            raise exceptions.FileError("Upload failed: cannot create file")
 
         sem = asyncio.Semaphore(self.max_coro)
         write_state_lock = asyncio.Lock()
@@ -376,7 +376,7 @@ class LinuxCmdOneLiner:
                     )
             result = result.strip()
             if not result.startswith("DONE"):
-                raise exceptions.FileError("上传分块失败")
+                raise exceptions.FileError("Upload chunk failed")
 
             return result.removeprefix("DONE").strip()
 
@@ -395,13 +395,13 @@ class LinuxCmdOneLiner:
         if "no_md5sum" in checkfile:
             return True  # we cannot check it
         if hashlib.md5(content).hexdigest() not in checkfile:
-            raise exceptions.FileError("上传失败：MD5验证失败")
+            raise exceptions.FileError("Upload failed: MD5 verification failed")
         return True
 
     async def download_file(self, filepath: str, callback=None):
         ls_result = await self.list_dir(filepath)
         if not ls_result:
-            raise exceptions.FileError("读取文件大小失败，也许文件不存在？")
+            raise exceptions.FileError("Failed to read file size; file may not exist")
         filesize = ls_result[0].filesize
 
         sem = asyncio.Semaphore(self.max_coro)
@@ -413,7 +413,7 @@ class LinuxCmdOneLiner:
 
         async def download_chunk(offset: int):
             nonlocal done_coro, coros, done_bytes
-            # 这里的offset从1开始
+            # offset starts at 1
             code = DOWNLOAD_FILE_CHUNK_CODE.format(
                 offset=offset,
                 filepath=shlex.quote(filepath),
@@ -433,11 +433,11 @@ class LinuxCmdOneLiner:
                         max_bytes=filesize,
                     )
             if "#FAILED" in result:
-                raise exceptions.FileError("无法读取文件")
+                raise exceptions.FileError("Cannot read file")
             try:
                 return base64.b64decode(result.strip())
             except Exception as exc:
-                raise exceptions.FileError("无法base64解码分块") from exc
+                raise exceptions.FileError("Cannot base64-decode chunk") from exc
 
         coros = [download_chunk(i) for i in range(1, filesize + 1, chunk_size)]
         chunks = await asyncio.gather(*coros)
@@ -453,17 +453,17 @@ class LinuxCmdOneLiner:
         content: bytes,
         send_method: t.Union[str, None] = None,
     ) -> t.Union[bytes, None]:
-        """把一串字节通过TCP发送到其他机器上，可以指定对应的发送方法"""
+        """Send bytes over TCP to another host with an optional method"""
         raise exceptions.ServerError(
-            "不支持此功能，你不会想用命令执行传HTTP吧？"
-        )  # 可以是可以，用nc或者bash可以做，但是暂时不实现这个功能
+            "This feature is not supported"
+        )  # it could be done with nc or bash, but it's not implemented
 
     async def get_send_tcp_support_methods(self) -> t.List[str]:
-        """得到发送字节支持的TCP方法"""
+        """Return supported TCP send methods"""
         return []
 
     async def get_basicinfo(self):
-        # TODO: 多加一点命令
+        # TODO: add more commands
         cmds = ["uname -a", "whoami", "id", "groups", "pwd"]
         info = GET_BASICINFO_CODE.format(cmds=shell_command(cmds))
         result = []
@@ -497,21 +497,21 @@ class LinuxCmdOneLiner:
         elif self.encoder == "raw":
             pass
         else:
-            raise exceptions.UserError("未知encoder: " + self.encoder)
+            raise exceptions.UserError("Unknown encoder: " + self.encoder)
         status_code, html = await self.submit_http(code)
         if status_code == 404:
             raise exceptions.TargetUnreachable(
-                f"状态码404, 没有这个webshell: {status_code}"
+                f"Status code 404, webshell not found: {status_code}"
             )
         if (start1 + start2) not in html:
             logger.debug(f"HTML response: {html}")
             raise exceptions.PayloadOutputError(
-                "找不到输出文本的开头，也许webshell没有执行代码？"
+                "Cannot find output start; webshell may not have executed"
             )
         html_afterstarted = html[html.index(start1 + start2) + len(start1 + start2) :]
         if stop not in html_afterstarted:
             raise exceptions.PayloadOutputError(
-                "找不到输出文本的结尾，也许webshell没有执行代码？"
+                "Cannot find output end; webshell may not have executed"
             )
         todecode = html_afterstarted[: html_afterstarted.index(stop)].removeprefix("\n")
 
@@ -521,7 +521,7 @@ class LinuxCmdOneLiner:
         if self.decoder == "raw":
             return todecode
         else:
-            raise exceptions.UserError("未知Decoder: " + self.decoder)
+            raise exceptions.UserError("Unknown decoder: " + self.decoder)
 
     async def submit_http(self, payload: t.Union[str, bytes]):
         try:
@@ -545,6 +545,6 @@ class LinuxCmdOneLiner:
             )
             return response.status_code, response.text
         except httpx.TimeoutException as exc:
-            raise exceptions.NetworkError("HTTP请求受控端超时") from exc
+            raise exceptions.NetworkError("HTTP request to target timed out") from exc
         except httpx.HTTPError as exc:
-            raise exceptions.NetworkError("发送HTTP请求到受控端失败：" + str(exc)) from exc
+            raise exceptions.NetworkError("Failed to send HTTP request to target: " + str(exc)) from exc

@@ -102,10 +102,10 @@ user_agents = [
 
 
 def random_user_agent() -> str:
-    """获得一个随机的user agent字符串
+    """Get a random user agent string
 
     Returns:
-        str: 随机的user agent
+        str: random user agent
     """
     return random.choices(
         [item["ua"] for item in user_agents],

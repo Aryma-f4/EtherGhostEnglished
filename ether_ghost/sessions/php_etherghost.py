@@ -147,10 +147,10 @@ class PHPWebshellEtherGhostOpen(PHPWebshellCommunication, PHPWebshellActions):
             )
             return response.status_code, response.content
         except httpx.TimeoutException as exc:
-            # 使用某个session id进行长时间操作(比如sleep 100)时会触发HTTP超时
-            # 此时服务端会为这个session id等待这个长时间操作
-            # 所以我们再使用这个session id发起请求就会卡住
-            # 所以我们要丢掉这个session id，使用另一个client发出请求
+            # Long operations (e.g., sleep 100) can trigger HTTP timeouts for a session id
+            # The server keeps waiting for that session id
+            # Reusing the same session id can block subsequent requests
+            # Drop the session id and use another client for the request
             if self.timeout_refresh_client:
                 logger.warning("HTTP request to target timed out; trying to refresh HTTP Client")
                 self.client = get_http_client(verify=self.https_verify)

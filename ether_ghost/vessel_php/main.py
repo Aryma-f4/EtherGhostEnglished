@@ -37,7 +37,7 @@ async def start_vessel_server(session: PHPSessionInterface, timeout=10):
     vessel_client_store = f"_{uuid.uuid4()}"
     vessel_session_key = f"_{uuid.uuid4()}"
     logger.debug(f"Vessel session key: {vessel_session_key}")
-    # 先测试一下phpsession是否可以使用
+    # Test whether PHP session is usable
     await session.php_eval(
         f"""
 @session_start();
@@ -51,9 +51,9 @@ echo json_encode($_SESSION['{vessel_client_store}']);
 """
     )
     if json.loads(stored_session_value) != vessel_client_store:
-        raise exceptions.TargetError("目标的PHP环境不支持Session!")
+        raise exceptions.TargetError("Target PHP environment does not support Session")
 
-    # 几乎一定会timeout， 因为vessel会一直运行
+    # This will almost certainly timeout because vessel keeps running
     async def start_vessel_request():
         try:
             _, vessel_server_resp = await session.php_eval_beforebody(
@@ -116,9 +116,9 @@ $client = new VesselClient('{vessel_session_key}');
             break
         logger.debug(f"Vessel check result: {result}")
     if not check_success:
-        raise exceptions.TargetError("启动失败：无法连接到启动的vessel")
+        raise exceptions.TargetError("Startup failed: cannot connect to vessel")
 
-    # 因为已经启动成功了所以直接把task给cancel掉就好了
+    # Since startup succeeded, cancel the task
     # request_task.cancel()
     return load_vessel_client_code
 

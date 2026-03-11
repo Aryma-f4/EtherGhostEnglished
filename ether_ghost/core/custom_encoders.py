@@ -4,7 +4,7 @@ import typing as t
 
 from ..utils import const
 
-# modules文件夹里有多个装有.py文件的文件夹，这些文件会被作为python包导入
+# modules folder contains subfolders with .py files that are imported as packages
 
 modules_folder = const.DATA_FOLDER / "modules"
 modules_folder.mkdir(exist_ok=True)

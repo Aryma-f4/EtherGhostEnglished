@@ -15,20 +15,20 @@ def user_json_loads(data: str, types: t.Union[type, t.Iterable[type]]):
         parsed = json.loads(data)
         if not isinstance(parsed, types):
             raise exceptions.UserError(
-                f"无效的JSON数据：需要的数据类型为{types}，输入的是{type(parsed)}，数据为{parsed!r}"
+                f"Invalid JSON data: expected {types}, got {type(parsed)}; data={parsed!r}"
             )
         return parsed
     except json.JSONDecodeError as exc:
-        raise exceptions.UserError(f"解码JSON失败: {data!r}") from exc
+        raise exceptions.UserError(f"Failed to decode JSON: {data!r}") from exc
 
 
 def parse_permission(perm: str):
-    """将rwxrwxrwx格式的文件权限解析为755格式的
+    """Parse rwxrwxrwx permissions into numeric format like 755
 
     Args:
-        perm (str): rwxrwxrwx格式的文件权限
+        perm (str): permission string in rwxrwxrwx format
     """
-    # 难看代码大赏
+    # Ugly code ahead
     result = ""
     if not re.match("^[rwx-]{9}$", perm):
         raise ValueError("Wrong permission format: " + perm)
@@ -52,14 +52,14 @@ def java_repr(obj):
 
 
 def md5_encode(s):
-    """将给定的字符串或字节序列转换成MD5"""
+    """Encode a string or bytes into MD5"""
     if isinstance(s, str):
         s = s.encode()
     return hashlib.md5(s).hexdigest()
 
 
 def base64_encode(s: str | bytes):
-    """将给定的字符串或字节序列编码成base64"""
+    """Encode a string or bytes into base64"""
     if isinstance(s, str):
         s = s.encode("utf-8")
     return base64.b64encode(s).decode()

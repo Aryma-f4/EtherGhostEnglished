@@ -1,4 +1,4 @@
-"""数据库管理，管理session info等信息"""
+"""Database management for session info and related data"""
 
 import typing as t
 from dataclasses import dataclass
@@ -16,7 +16,7 @@ Base = sa.orm.declarative_base()
 
 
 class SessionInfoModel(Base):  # type: ignore
-    """sqlalchemy的Model，用于在数据库中保存session info"""
+    """SQLAlchemy model for storing session info in the database"""
 
     __tablename__ = "session_info"
     record_id = sa.Column(sa.Integer, primary_key=True)
@@ -29,7 +29,7 @@ class SessionInfoModel(Base):  # type: ignore
 
 
 class SessionConnectorModel(Base):  # type: ignore
-    """sqlalchemy的Model，用于在数据库中保存session connector"""
+    """SQLAlchemy model for storing session connectors in the database"""
 
     __tablename__ = "session_connector"
     record_id = sa.Column(sa.Integer, primary_key=True)
@@ -42,7 +42,7 @@ class SessionConnectorModel(Base):  # type: ignore
 
 
 class SettingsModel(Base):  # type: ignore
-    """sqlalchemy的Model，用于在数据库中保存设置"""
+    """SQLAlchemy model for storing settings in the database"""
 
     __tablename__ = "settings"
     record_id = sa.Column(sa.Integer, primary_key=True)
@@ -64,8 +64,8 @@ class DBMSInfoModel(Base):  # type: ignore
 
 @dataclass
 class SessionInfoModelTypeHint:
-    """SessionInfoModel的type hint
-    解决pylint不能正确识别SQLAlchemy属性类型的问题"""
+    """Type hints for SessionInfoModel
+    Fixes pylint not recognizing SQLAlchemy attribute types"""
 
     record_id: int
     session_type: str
@@ -78,8 +78,8 @@ class SessionInfoModelTypeHint:
 
 @dataclass
 class SessionConnectorModelTypeHint:
-    """SessionConnectorModel的type hint
-    解决pylint不能正确识别SQLAlchemy属性类型的问题"""
+    """Type hints for SessionConnectorModel
+    Fixes pylint not recognizing SQLAlchemy attribute types"""
 
     record_id: int
     connector_type: str
@@ -106,11 +106,11 @@ class DBMSInfoModelTypeHint:
 Base.metadata.create_all(engine)
 
 
-# 转换函数
+# Conversion helpers
 
 
 def model_to_info(model: SessionInfoModelTypeHint) -> SessionInfo:
-    """将SessionInfoModel(SQLAlchemy的对象)转换成SessionInfo(Pydantic的对象)"""
+    """Convert SessionInfoModel (SQLAlchemy) to SessionInfo (Pydantic)"""
     connection = {**model.connection}
     result = SessionInfo(
         session_type=model.session_type,
@@ -124,13 +124,13 @@ def model_to_info(model: SessionInfoModelTypeHint) -> SessionInfo:
 
 
 def info_to_model(info: SessionInfo) -> SessionInfoModel:
-    """将SessionInfo(Pydantic的对象)转换成SessionInfoModel(SQLAlchemy的对象)"""
+    """Convert SessionInfo (Pydantic) to SessionInfoModel (SQLAlchemy)"""
     info_dict = info.model_dump()
     return SessionInfoModel(**info_dict)
 
 
 def model_to_connector(model: SessionConnectorModelTypeHint) -> SessionConnectorInfo:
-    """将SessionConnectorModel(SQLAlchemy的对象)转换成SessionConnector(Pydantic的对象)"""
+    """Convert SessionConnectorModel (SQLAlchemy) to SessionConnector (Pydantic)"""
     connection = {**model.connection}
     result = SessionConnectorInfo(
         connector_type=model.connector_type,
@@ -144,7 +144,7 @@ def model_to_connector(model: SessionConnectorModelTypeHint) -> SessionConnector
 
 
 def connector_to_model(connector: dict) -> SessionConnectorModel:
-    """将dict转换成SessionConnectorModel(SQLAlchemy的对象)"""
+    """Convert dict to SessionConnectorModel (SQLAlchemy)"""
     return SessionConnectorModel(**connector)
 
 def _derive_key_from_secret() -> bytes:
@@ -182,23 +182,23 @@ def dbms_info_to_model(info: DBMSInfo) -> DBMSInfoModel:
     data["password_enc"] = _enc_password(data.pop("password", ""))
     return DBMSInfoModel(**data)
 
-# 操作数据库
+# Database operations
 
 
 # TODO: list session by created time
 def list_sessions() -> t.List[SessionInfo]:
-    """列出数据库中所有的session"""
+    """List all sessions in the database"""
     return [model_to_info(model) for model in orm_session.query(SessionInfoModel).all()]
 
 
 def add_session_info(info: SessionInfo):
-    """添加一个session"""
+    """Add a session"""
     orm_session.add(info_to_model(info))
     orm_session.commit()
 
 
 def add_session_infos(infos: t.List[SessionInfo]):
-    """批量添加多个session"""
+    """Add multiple sessions in batch"""
     models = [info_to_model(info) for info in infos]
     orm_session.add_all(models)
     orm_session.commit()
@@ -207,7 +207,7 @@ def add_session_infos(infos: t.List[SessionInfo]):
 def get_session_info_by_id(
     session_id: t.Union[str, UUID],
 ) -> t.Union[None, SessionInfo]:
-    """根据ID查询session，以sessioninfo的形式输出"""
+    """Get session by ID and return session info"""
     if isinstance(session_id, str):
         session_id = UUID(session_id)
     model = (
@@ -223,7 +223,7 @@ def get_session_info_by_id(
 def delete_session_info_by_id(
     session_id: t.Union[str, UUID], ignore_unexist=False
 ) -> bool:
-    """根据ID查询session，并将对应的session info转换成session实例"""
+    """Get session by ID and delete it"""
     if isinstance(session_id, str):
         session_id = UUID(session_id)
     model = (
@@ -239,7 +239,7 @@ def delete_session_info_by_id(
 
 
 def get_session_by_session_type(session_type: str) -> t.List[SessionInfo]:
-    """根据session_type查询所有session"""
+    """Get all sessions by session_type"""
     models = (
         orm_session.query(SessionInfoModel)
         .filter(SessionInfoModel.session_type == session_type)
@@ -249,7 +249,7 @@ def get_session_by_session_type(session_type: str) -> t.List[SessionInfo]:
 
 
 def delete_session_by_session_type(session_type: str) -> int:
-    """根据session_type删除所有session，返回删除的数量"""
+    """Delete sessions by session_type and return the count"""
     models = (
         orm_session.query(SessionInfoModel)
         .filter(SessionInfoModel.session_type == session_type)
@@ -264,7 +264,7 @@ def delete_session_by_session_type(session_type: str) -> int:
 
 
 def list_session_connectors() -> t.List[SessionConnectorInfo]:
-    """列出数据库中所有的session connector"""
+    """List all session connectors in the database"""
     return [
         model_to_connector(model)
         for model in orm_session.query(SessionConnectorModel).all()
@@ -272,26 +272,26 @@ def list_session_connectors() -> t.List[SessionConnectorInfo]:
 
 
 def add_session_connector(connector: SessionConnectorInfo):
-    """添加一个session connector"""
+    """Add a session connector"""
     orm_session.add(connector_to_model(connector.model_dump()))
     orm_session.commit()
 
 
 def add_session_connectors(connectors: t.List[SessionConnectorInfo]):
-    """批量添加多个session connector"""
+    """Add multiple session connectors in batch"""
     models = [connector_to_model(connector.model_dump()) for connector in connectors]
     orm_session.add_all(models)
     orm_session.commit()
 
 def get_session_connector_all() -> t.List[SessionConnectorInfo]:
-    """获取所有session connector"""
+    """Get all session connectors"""
     models = orm_session.query(SessionConnectorModel).all()
     return [model_to_connector(model) for model in models]
 
 def get_session_connector_by_connector_id(
     connector_id: t.Union[str, UUID],
 ) -> t.Union[None, SessionConnectorInfo]:
-    """根据connector_id查询session connector"""
+    """Get session connector by connector_id"""
     if isinstance(connector_id, str):
         connector_id = UUID(connector_id)
     model = (
@@ -305,7 +305,7 @@ def get_session_connector_by_connector_id(
 
 
 def update_session_connector(connector: SessionConnectorInfo) -> bool:
-    """根据connector_id更新session connector"""
+    """Update session connector by connector_id"""
     connector_id = connector.connector_id
     if isinstance(connector_id, str):
         connector_id = UUID(connector_id)
@@ -327,7 +327,7 @@ def update_session_connector(connector: SessionConnectorInfo) -> bool:
 def delete_session_connector_by_connector_id(
     connector_id: t.Union[str, UUID], ignore_unexist=False
 ) -> bool:
-    """根据connector_id删除session connector"""
+    """Delete session connector by connector_id"""
     if isinstance(connector_id, str):
         connector_id = UUID(connector_id)
     model = (
@@ -343,7 +343,7 @@ def delete_session_connector_by_connector_id(
 
 
 def get_settings() -> dict:
-    """查询当前设置"""
+    """Get current settings"""
     model = orm_session.query(SettingsModel).first()
     if model is None:
         return {}
@@ -363,7 +363,7 @@ def set_settings(settings: dict):
 
 
 def ensure_settings():
-    """保证当前设置存在，如果不存在设置则将写入默认设置"""
+    """Ensure settings exist; write defaults if missing"""
     default_settings = {"theme": "green", "proxy": ""}
     if not get_settings():
         set_settings(default_settings)

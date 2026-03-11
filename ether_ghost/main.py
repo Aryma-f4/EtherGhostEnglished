@@ -85,7 +85,7 @@ temp_dir = Path(tempfile.gettempdir())
 temp_files: t.Dict[UUID, t.Tuple[str, Path]] = {}
 
 
-# TODO: 启动时同时启动所有需要启动的connector
+# TODO: start all autostart connectors on boot
 
 
 @asynccontextmanager
@@ -127,10 +127,10 @@ app.include_router(dbms_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许的源，这里设置为所有
-    allow_credentials=True,  # 是否允许携带凭据
-    allow_methods=["*"],  # 允许的 HTTP 方法
-    allow_headers=["*"],  # 允许的头部信息
+    allow_origins=["*"],  # allowed origins, set to all
+    allow_credentials=True,  # allow credentials
+    allow_methods=["*"],  # allowed HTTP methods
+    allow_headers=["*"],  # allowed headers
 )
 
 mimetypes.add_type("application/javascript", ".js")

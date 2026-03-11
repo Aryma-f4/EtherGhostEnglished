@@ -1,4 +1,4 @@
-"""定义session的接口和输入输出"""
+"""Define session interfaces and I/O"""
 
 import typing as t
 from dataclasses import dataclass
@@ -31,7 +31,7 @@ class OptionGroup(t.TypedDict):
 
 @dataclass
 class DirectoryEntry:
-    """文件夹中某一项的信息"""
+    """Information about an entry in a directory"""
 
     name: str
     permission: str
@@ -41,71 +41,71 @@ class DirectoryEntry:
 
 @dataclass
 class BasicInfoEntry:
-    """有关session的一项基本信息"""
+    """A basic info item about a session"""
 
     key: str
     value: str
 
 
-# Session对象会在处理一个请求的时候创建，请求结束时立即丢弃
-# 所以Session对象基本上是无状态的，状态会在请求结束后被丢弃
+# Session objects are created per request and discarded immediately
+# They are effectively stateless across requests
 
 
 class SessionInterface:
-    """Session接口"""
+    """Session interface"""
 
     session_type: t.ClassVar[str]
     readable_name: t.ClassVar[str]
     conn_options: t.ClassVar[t.List[OptionGroup]]
 
     async def execute_cmd(self, cmd: str) -> str:
-        """在目标上执行命令"""
+        """Execute a command on the target"""
         raise NotImplementedError()
 
     async def test_usablility(self) -> bool:
-        """测试session的可用性"""
+        """Test session availability"""
         raise NotImplementedError()
 
     async def list_dir(self, dir_path: str) -> t.List[DirectoryEntry]:
-        """列出某个文件夹中的内容，包括`.`和`..`，如果没有内容则会填充`..`"""
+        """List directory contents including . and ..; fill .. if empty"""
         raise NotImplementedError()
 
     async def mkdir(self, dir_path: str) -> None:
-        """创建文件夹"""
+        """Create directory"""
         raise NotImplementedError()
 
     async def get_file_contents(
         self, filepath: str, max_size: int = 1024 * 200
     ) -> bytes:
-        """获取文件的内容，内容是一个字节序列，不是已经解码的字符串"""
+        """Get file contents as bytes, not a decoded string"""
         raise NotImplementedError()
 
     async def put_file_contents(self, filepath: str, content: bytes) -> bool:
-        """保存文件的内容，内容是一个字节序列，不是已经解码的字符串"""
+        """Save file contents as bytes, not a decoded string"""
         raise NotImplementedError()
 
     async def delete_file(self, filepath: str) -> bool:
-        """删除文件"""
+        """Delete file"""
         raise NotImplementedError()
 
     async def move_file(self, filepath: str, new_filepath: str) -> None:
-        """移动文件到新的目录"""
+        """Move file to a new path"""
         raise NotImplementedError()
 
     async def copy_file(self, filepath: str, new_filepath: str) -> None:
-        """复制一份当前文件到新的位置"""
+        """Copy file to a new path"""
         raise NotImplementedError()
 
     async def upload_file(
         self, filepath: str, content: bytes, callback: t.Union[t.Callable, None] = None
     ) -> bool:
-        """上传文件，内容是一个字节序列，不是已经解码的字符串"""
+        """Upload file as bytes, not a decoded string"""
         raise NotImplementedError()
 
     async def download_file(
         self, filepath: str, callback: t.Union[t.Callable, None] = None
     ) -> bytes:
-        """下载，内容是一个字节序列，不是已经解码的字符串"""
+        """Download as bytes, not a decoded string"""
         raise NotImplementedError()
 
     async def send_bytes_over_tcp(
@@ -115,46 +115,46 @@ class SessionInterface:
         content: bytes,
         send_method: t.Union[str, None] = None,
     ) -> t.Union[bytes, None]:
-        """把一串字节通过TCP发送到其他机器上，可以指定对应的发送方法"""
+        """Send bytes over TCP to another host with an optional method"""
         raise NotImplementedError()
 
     async def get_send_tcp_support_methods(self) -> t.List[str]:
-        """得到发送字节支持的TCP方法"""
+        """Return supported TCP send methods"""
         raise NotImplementedError()
 
     async def get_pwd(self) -> str:
-        """获取当前的目录"""
+        """Get current directory"""
         raise NotImplementedError()
 
     async def get_basicinfo(self) -> t.List[BasicInfoEntry]:
-        """获取当前的基本信息"""
+        """Get current basic info"""
         raise NotImplementedError()
 
     async def open_reverse_shell(self, host: str, port: int) -> None:
-        """打开一个反弹shell"""
+        """Open a reverse shell"""
         raise NotImplementedError()
 
 
 class PHPSessionInterface(SessionInterface):
-    """PHP Session接口"""
+    """PHP Session interface"""
 
     async def download_phpinfo(self) -> bytes:
-        """获取当前的phpinfo文件"""
+        """Get phpinfo file"""
         raise NotImplementedError()
 
     async def php_eval(self, code: str) -> str:
-        """执行给定的代码，使用eval"""
+        """Execute code using eval"""
         raise NotImplementedError()
 
     async def php_eval_beforebody(self, code: str) -> t.Tuple[int, str]:
-        """执行给定的代码，不使用任何wrapper
+        """Execute code without wrapper
 
-        保证在此之前不使用echo等输出body正文，但不能自动从HTML中提取代码输出"""
-        # 为了保证能正常地打开和关闭php session
+        Ensure no echo output before this, but cannot auto-extract output from HTML"""
+        # ensure PHP session can open/close correctly
         raise NotImplementedError()
 
     async def emulated_antsword(self, body: bytes) -> t.Tuple[int, str]:
-        """解析蚁剑给的body, 返回raw的HTTP返回码和内容"""
+        """Parse AntSword body and return raw HTTP status code and body"""
         raise NotImplementedError()
 
 
@@ -168,9 +168,9 @@ session_type_info: t.Dict[str, SessionTypeInfo] = {}
 
 
 def register_session(cls):
-    """装饰session class, 注册一个session
-    不要使用这个函数注册connector的session
-    `register_connector`会自动使用其他方式注册对应的connector
+    """Decorate a session class and register a session
+    Do not use this to register connector sessions
+    register_connector will register the connector via another path
     """
     session_type_info[cls.session_type] = {
         "constructor": cls,

@@ -72,7 +72,7 @@ def reverse_shell_payload(host: str, port: int):
 
 
 def shell_command(args: t.List[str]):
-    """转译命令或命令参数"""
+    """Quote a command or its arguments"""
     return " ".join(shlex.quote(arg) for arg in args)
 
 
@@ -135,7 +135,7 @@ class ReverseShellSession(SessionInterface):
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ):
-        self.drop_self = drop_self  # 从connector中删除自己
+        self.drop_self = drop_self  # remove self from connector
         self.chunk_size = int(config.get("chunk_size", 1024))
         self.encoder = str(config.get("encoder", "raw"))
         self.decoder = str(config.get("decoder", "raw"))
@@ -154,7 +154,7 @@ class ReverseShellSession(SessionInterface):
         return (await self.submit("pwd")).strip()
 
     async def _list_dir(self, dir_path: str) -> t.Union[t.List[DirectoryEntry], None]:
-        # 不仅列出文件夹，在给定的是文件时给出文件的详细信息
+        # list directory; if a file is given, return its file details
 
         # yes, we are parsing output of `ls`, although we shoudn't
         command_output = await self.submit(
@@ -312,7 +312,7 @@ class ReverseShellSession(SessionInterface):
 
         async def download_chunk(offset: int):
             nonlocal done_coro, coros, done_bytes
-            # 这里的offset从1开始
+            # offset starts at 1
             code = DOWNLOAD_FILE_CHUNK_CODE.format(
                 offset=offset,
                 filepath=shlex.quote(filepath),
@@ -351,17 +351,17 @@ class ReverseShellSession(SessionInterface):
         content: bytes,
         send_method: t.Union[str, None] = None,
     ) -> t.Union[bytes, None]:
-        """把一串字节通过TCP发送到其他机器上，可以指定对应的发送方法"""
+        """Send bytes over TCP to another host with an optional method"""
         raise exceptions.ServerError(
-            "不支持此功能，你不会想用命令执行传HTTP吧？"
-        )  # 可以是可以，用nc或者bash可以做，但是暂时不实现这个功能
+            "This feature is not supported"
+        )  # it could be done with nc or bash, but it's not implemented
 
     async def get_send_tcp_support_methods(self) -> t.List[str]:
-        """得到发送字节支持的TCP方法"""
+        """Return supported TCP send methods"""
         return []
 
     async def get_basicinfo(self):
-        # TODO: 多加一点命令
+        # TODO: add more commands
         cmds = ["uname -a", "whoami", "id", "groups", "pwd"]
         info = GET_BASICINFO_CODE.format(cmds=shell_command(cmds))
         result = []
@@ -449,5 +449,5 @@ class ReverseShellSession(SessionInterface):
                 self.drop_self()  # notify connector to drop itself on connection error
                 raise exceptions.NetworkError("Connection reset") from e
             except Exception as e:
-                self.drop_self()  # 出现其他错误时通知connector删除自己
+                self.drop_self()  # notify connector to drop itself on other errors
                 raise e

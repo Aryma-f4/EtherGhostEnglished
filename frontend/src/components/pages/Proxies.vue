@@ -155,7 +155,7 @@ setTimeout(() => {
         <option value="">Select proxy type</option>
         <option v-for="proxyType in Object.keys(readableProxyType)" :value="proxyType">{{
           readableProxyType[proxyType] }}</option>
-        <!-- <option value="backward">反向代理</option> -->
+        <!-- <option value="backward">Reverse proxy</option> -->
       </select>
       <select name="session" id="" v-model="addProxyInput.session_id">
         <option :value="''">Select a session

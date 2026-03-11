@@ -90,6 +90,21 @@ export async function getDataOrPopupError(uri, config) {
   return parseDataOrPopupError(resp)
 }
 
+export async function getDataOrSilentError(uri, config) {
+  let url = `${getCurrentApiUrl()}${uri}`
+  let resp
+  try {
+    resp = await axios.get(url, config)
+  } catch (e) {
+    return null
+  }
+  try {
+    return parseDataOrPopupError(resp)
+  } catch {
+    return null
+  }
+}
+
 export async function postDataOrPopupError(uri, data, config = undefined) {
   let url = `${getCurrentApiUrl()}${uri}`
   let resp

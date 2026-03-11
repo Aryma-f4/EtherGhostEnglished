@@ -82,7 +82,7 @@ class ReverseShellConnector(SessionConnector):
             await self.socket.serve_forever()
 
     def drop_session(self, config: dict):
-        """在socket失效后直接丢掉socket和对应的session_info"""
+        """Drop socket and session_info when socket becomes invalid"""
         if (
             "connection_id" not in config
             or not isinstance(config["connection_id"], str)
@@ -112,7 +112,7 @@ async def example():
     try:
         while True:
             for session_info in list_sessions():
-                # TODO: 让ReverseShellSession还原ANSI
+                # TODO: restore ANSI for ReverseShellSession
                 session = connector.build_session(session_info.connection)
                 result = await session.execute_cmd("ls")
                 print(f"{result}")

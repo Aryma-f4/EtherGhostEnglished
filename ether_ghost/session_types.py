@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class SessionInfo(BaseModel):
-    """session的基本信息"""
+    """Basic session info"""
 
     session_type: str
     name: str
@@ -18,7 +18,7 @@ class SessionInfo(BaseModel):
 
 
 class SessionConnectorInfo(BaseModel):
-    """Session connector 的 Pydantic model"""
+    """Pydantic model for session connector"""
 
     connector_type: str
     connector_id: UUID

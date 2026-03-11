@@ -1,11 +1,11 @@
 """
-TCP代理管理模块
+TCP proxy management module
 
-实现两种TCP代理服务：
-1. PsudoTcpServeConnection - 伪TCP代理
-2. VesselTcpForwardServeConnection - Vessel TCP转发代理
+Implements two TCP proxy services:
+1. PsudoTcpServeConnection - pseudo TCP proxy
+2. VesselTcpForwardServeConnection - Vessel TCP forward proxy
 
-提供代理服务的启动和管理功能
+Provides startup and management for proxy services
 """
 
 import asyncio
@@ -88,11 +88,11 @@ class PsudoTcpServeConnection:
         except OSError as exc:
             if exc.errno == 98:
                 raise exceptions.ServerError(
-                    f"无法绑定{self.listen_host}:{self.listen_port}，是不是被占用了？"
+                    f"Cannot bind {self.listen_host}:{self.listen_port}; is it already in use?"
                 )
-            raise exceptions.ServerError("无法启动代理") from exc
+            raise exceptions.ServerError("Failed to start proxy") from exc
         except Exception as exc:
-            raise exceptions.ServerError("无法启动代理") from exc
+            raise exceptions.ServerError("Failed to start proxy") from exc
         task = asyncio.create_task(server.serve_forever())
         return task
 
@@ -110,7 +110,7 @@ async def start_psudo_tcp_proxy(
     ).start_server()
 
 
-# TODO: 允许用户在设置里指定这两个值
+# TODO: allow users to configure these values in settings
 REQUEST_INTERVAL_SHORT = 0.1
 REQUEST_INTERVAL_LONG = 2
 
@@ -122,7 +122,7 @@ async def sender(
     reader: asyncio.StreamReader,
 ):
     while state["socket_open"]:
-        # TODO: 允许用户设置这里的buffer大小
+        # TODO: allow users to configure buffer size here
         tosend = await reader.read(1024 * 128)
         if not tosend:
             state["socket_open"] = False

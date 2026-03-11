@@ -18,7 +18,7 @@ import Proxies from "./components/pages/Proxies.vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import { getCurrentApiUrl } from "./assets/utils";
 import Terminal from "vue-web-terminal";
-//  亮色主题：vue-web-terminal/lib/theme/light.css
+// Light theme: vue-web-terminal/lib/theme/light.css
 import "./assets/vue-web-terminal.css";
 import ReverseShellMain from "./components/pages/ReverseShellMain.vue";
 import ConnectorMain from "./components/pages/ConnectorMain.vue";

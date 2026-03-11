@@ -218,7 +218,7 @@ async function checkUploadStatus(stopSignal) {
       return;
     }
   }
-  // 最后再刷新一次，保证去除上传失败的文件
+  // Refresh once more to ensure failed uploads are cleared
   let result = await getDataOrPopupError(`/session/${props.session}/file_upload_status`)
   uploadingFiles.value = result
 }
@@ -233,7 +233,7 @@ async function checkDownloadStatus(stopSignal) {
       return;
     }
   }
-  // 最后再刷新一次，保证去除上传失败的文件
+  // Refresh once more to ensure failed uploads are cleared
   let result = await getDataOrPopupError(`/session/${props.session}/file_download_status`)
   downloadingFiles.value = result
 }
@@ -379,7 +379,7 @@ const ClickMenuFolderEntry = ClickMenuManager([
       }
     })
   } else {
-    addPopup("red", "内部错误", `没有实现动作：${item.name}`)
+    addPopup("red", "Internal error", `Action not implemented: ${item.name}`)
   }
 })
 

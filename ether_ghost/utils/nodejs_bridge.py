@@ -11,7 +11,7 @@ def nodejs_eval(code, argv):
             proc.wait()
             if proc.returncode != 0:
                 raise exceptions.ServerError(
-                    f"nodejs执行错误，返回值为{proc.returncode}"
+                    f"NodeJS execution failed, return code {proc.returncode}"
                 )
             stdout, _ = proc.communicate()
             return stdout

@@ -30,11 +30,11 @@ from ..core.php_session_common import (
 
 logger = logging.getLogger("core.sessions.php_oneline")
 
-# 为了执行蚁剑encoder，我们在发送请求时读取对应的文件传给NodeJS执行
-# 此时只要蓝队可以写文件就可以利用encoder实现RCE
-# 但是为了实现动态加载encoder没有其他方法规避这个风险
-# 为了减缓风险，我们提前检测所有的encoder
-# 这样至少可以避免游魂启动后被反制
+# To execute AntSword encoders, we read the file and send it to NodeJS
+# If defenders can write files, the encoder could be abused for RCE
+# There is no alternative for dynamic loading of encoders
+# To reduce risk, we validate all encoders up front
+# This at least prevents counter-attacks after startup
 
 antsword_encoders = [file.name for file in const.ANTSWORD_ENCODER_FOLDER.glob("*.js")]
 antsword_encoders_alternatives: t.List[OptionAlternative] = [
@@ -260,10 +260,10 @@ class PHPWebshellOneliner(PHPWebshellCommunication, PHPWebshellActions):
             self.antsword_encoder = encoder
 
         if self.antsword_encoder and self.password_method != "POST":
-            raise exceptions.UserError("在使用蚁剑Encoder时密码提交方法必须为POST！")
+            raise exceptions.UserError("Password submit method must be POST when using AntSword Encoder")
 
         if self.antsword_encoder and self.method != "POST":
-            raise exceptions.UserError("在使用蚁剑Encoder时HTTP请求方法必须为POST！")
+            raise exceptions.UserError("HTTP request method must be POST when using AntSword Encoder")
 
         if not self.timeout:
             self.timeout = None
@@ -308,8 +308,8 @@ class PHPWebshellOneliner(PHPWebshellCommunication, PHPWebshellActions):
         if self.antsword_encoder:
             if isinstance(payload, bytes):
                 raise exceptions.UserError(
-                    "蚁剑的编码器不支持编码bytes类型的Payload！"
-                    + "请使用其他的PHP代码编码器"
+                    "AntSword encoder does not support bytes payloads. "
+                    + "Please use another PHP encoder"
                 )
             data = eval_antsword_encoder(self.antsword_encoder, self.password, payload)
             if self.http_params_obfs:
@@ -332,16 +332,16 @@ class PHPWebshellOneliner(PHPWebshellCommunication, PHPWebshellActions):
             return response.status_code, response.text
 
         except httpx.TimeoutException as exc:
-            # 使用某个session id进行长时间操作(比如sleep 100)时会触发HTTP超时
-            # 此时服务端会为这个session id等待这个长时间操作
-            # 所以我们再使用这个session id发起请求就会卡住
-            # 所以我们要丢掉这个session id，使用另一个client发出请求
+            # Long operations (e.g., sleep 100) can trigger HTTP timeouts for a session id
+            # The server keeps waiting for that session id
+            # Reusing the same session id can block subsequent requests
+            # Drop the session id and use another client for the request
 
             if self.timeout_refresh_client:
-                logger.warning("HTTP请求受控端超时，尝试刷新HTTP Client")
+                logger.warning("HTTP request to target timed out; refreshing HTTP client")
                 self.client = get_http_client(verify=self.https_verify)
-            raise exceptions.NetworkError("HTTP请求受控端超时") from exc
+            raise exceptions.NetworkError("HTTP request to target timed out") from exc
         except httpx.ProxyError as exc:
-            raise exceptions.NetworkError("连接代理失败") from exc
+            raise exceptions.NetworkError("Failed to connect to proxy") from exc
         except httpx.HTTPError as exc:
-            raise exceptions.NetworkError("发送HTTP请求到受控端失败：" + str(exc)) from exc
+            raise exceptions.NetworkError("Failed to send HTTP request to target: " + str(exc)) from exc

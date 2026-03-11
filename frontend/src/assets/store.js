@@ -1,9 +1,9 @@
 import { reactive, ref, watch } from 'vue'
-import { getDataOrPopupError } from './utils'
+import { getDataOrPopupError, getDataOrSilentError } from './utils'
 
-// 这里的popupsRef是一个指向Popups compoment的ref
-// Popups全局唯一，只有App.vue里有一个
-// 为了添加popup，其他模块需要取到这里的Popups ref然后调用里面的函数
+// popupsRef is a ref pointing to the Popups component
+// Popups is global; there's only one in App.vue
+// To add a popup, other modules access this ref and call its functions
 
 export const popupsRef = ref(null)
 
@@ -28,8 +28,8 @@ watch(
       store.sessionName = ""
       return;
     }
-    let sessionInfo = await getDataOrPopupError(`/session/${newSession}/`)
-    store.sessionName = sessionInfo.name
+    let sessionInfo = await getDataOrSilentError(`/session/${newSession}/`)
+    store.sessionName = sessionInfo?.name || ""
   }
 )
 

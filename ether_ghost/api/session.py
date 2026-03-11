@@ -194,7 +194,7 @@ async def session_get_file_contents(session_id: UUID, current_dir: str, filename
 @router.post("/session/{session_id}/put_file_contents")
 @catch_user_error
 async def session_put_file_contents(session_id: UUID, request: FileContentRequest):
-    """使用session写入文件内容"""
+    """Write file contents via session"""
     session: SessionInterface = session_manager.get_session_by_id(session_id)
     path = remote_path(request.current_dir) / request.filename
     content = request.text.encode(request.encoding)
@@ -231,8 +231,8 @@ async def session_download_file(
     filename: str,
 ):
     """Download file via session"""
-    # 一个文件最多只有几十兆，浏览器应该可以轻松处理
-    # 如果用户想要用webshell下载几百兆的文件。。。那应该是用户自己的问题
+    # Files are usually only tens of MB; browsers should handle it
+    # If users want to download hundreds of MB via webshell, that's on them
     filepath = remote_path(folder) / filename
     session: SessionInterface = session_manager.get_session_by_id(session_id)
     with file_transfer_status.record_download_file(
@@ -252,7 +252,7 @@ async def session_download_file(
 @catch_user_error
 async def session_delete_file(session_id: UUID, current_dir: str, filename: str):
     """Delete file via session"""
-    # TODO: 让所有webshell支持删除文件夹
+    # TODO: enable folder deletion for all webshells
     session: SessionInterface = session_manager.get_session_by_id(session_id)
     path = remote_path(current_dir) / filename
     result = await session.delete_file(str(path))
@@ -329,7 +329,7 @@ async def session_download_phpinfo(session_id: UUID):
         return {"code": -400, "msg": "Specified session is not a PHP Session"}
     content = await session.download_phpinfo()
 
-    headers = {"Content-Disposition": "attachment; filename=phpinfo.html"}  # 设置文件名
+    headers = {"Content-Disposition": "attachment; filename=phpinfo.html"}  # set filename
     return Response(content=content, media_type="text/html", headers=headers)
 
 

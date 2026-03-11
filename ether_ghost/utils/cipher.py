@@ -28,13 +28,13 @@ def get_rsa_key() -> t.Tuple[bytes, bytes]:
 
 
 def private_decrypt_rsa(data: t.Union[bytes, str]) -> bytes:
-    """解密base64编码的，rsa加密的数据
+    """Decrypt base64-encoded RSA-encrypted data
 
     Args:
-        data (bytes): base64编码的加密数据
+        data (bytes): base64-encoded encrypted data
 
     Returns:
-        bytes: 解密的数据
+        bytes: decrypted data
     """
     key = RSA.import_key(private_key.read_bytes())
 

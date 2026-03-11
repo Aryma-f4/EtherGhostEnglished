@@ -117,7 +117,7 @@ function getCurrentConnector() {
   if (store.connector) {
     connector.connector_id = store.connector;
   } else {
-    // 生成新的 UUID
+    // Generate a new UUID
     connector.connector_id = crypto.randomUUID();
   }
   return connector
@@ -163,7 +163,7 @@ setTimeout(async () => {
   if (props.connector) {
     await fetchCurrentConnector()
   } else {
-    // 设置默认连接器类型
+    // Set default connector type
     if (basicOptionGroup.options.find(opt => opt.id === 'connector_type').alternatives.length > 0) {
       const defaultType = basicOptionGroup.options.find(opt => opt.id === 'connector_type').alternatives[0].value
       optionValues.connector_type = defaultType

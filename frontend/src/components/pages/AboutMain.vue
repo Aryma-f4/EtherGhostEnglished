@@ -26,7 +26,7 @@ async function checkUpdate() {
 <template>
   <div class="info-main">
     <div class="info-panel shadow-box">
-      <!-- TODO: 把这个界面做得更美观一点 -->
+      <!-- TODO: Make this page look nicer -->
       <h1>EtherGhost</h1>
       <p>{{ version }}</p>
       <p>

@@ -9,7 +9,7 @@ const emit = defineEmits(["remove", "clickItem", "rightClickItem"])
 // An item is sth like this:
 // {
 //     "name": "open_terminal",
-//     "text": "打开终端",
+//     "text": "Open Terminal",
 //     "icon": IconTerminal,
 //     "color": "white",
 //   },
