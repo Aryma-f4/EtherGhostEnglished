@@ -11,6 +11,7 @@ services:
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
     ports:
       - "8022:8022"
+      - "4440-4946:4440-4946"      # add this line for your reverse shell ports
     restart: unless-stopped
     volumes:
       - etherghost_data:/root/.local/share/EtherGhost
