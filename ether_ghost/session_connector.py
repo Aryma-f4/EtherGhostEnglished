@@ -50,7 +50,7 @@ def register_session(client_id: uuid.UUID, session_info: SessionInfo):
 
 
 def delete_session(client_id: uuid.UUID):
-    del connector_sessions[client_id]
+    connector_sessions.pop(client_id, None)
 
 
 class SessionConnector(Protocol):

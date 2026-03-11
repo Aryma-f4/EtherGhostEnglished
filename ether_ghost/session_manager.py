@@ -126,5 +126,9 @@ async def delete_session_info_by_id(session_id: UUID):
         assert (
             session_info is not None
         ), "Internal error: we should get session info when finding its connector"
-        await connector.close_session(session_info.connection)
-    db.delete_session_info_by_id(session_id)
+        try:
+            await connector.close_session(session_info.connection)
+        except Exception:
+            session_connector.delete_session(session_id)
+    db.delete_session_info_by_id(session_id, ignore_unexist=True)
+    session_store.pop(session_id, None)
